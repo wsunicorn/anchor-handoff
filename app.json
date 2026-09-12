@@ -81,7 +81,7 @@
       [
         "@sentry/react-native/expo",
         {
-          "organization": "anchor",
+          "organization": "anchor-wsunicorn",
           "project": "anchor-mobile",
           "url": "https://sentry.io/"
         }
