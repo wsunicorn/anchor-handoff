@@ -40,21 +40,6 @@ health_timeout = "2m"
 # server_version;` on the remote database to check.
 major_version = 17
 
-[db.pooler]
-enabled = false
-# Port to use for the local connection pooler.
-port = 54329
-# Specifies when a server connection can be reused by other clients.
-# Configure one of the supported pooler modes: `transaction`, `session`.
-pool_mode = "transaction"
-# How many server connections to allow per user/database pair.
-default_pool_size = 20
-# Maximum number of client connections allowed.
-max_client_conn = 100
-
-# [db.vault]
-# secret_key = "env(SECRET_VALUE)"
-
 [db.migrations]
 # If disabled, migrations will be skipped during a db push or reset.
 enabled = true
@@ -133,16 +118,6 @@ enabled = true
 
 # Store analytical data in S3 for running ETL jobs over Iceberg Catalog
 # This feature is only available on the hosted platform.
-[storage.analytics]
-enabled = false
-max_namespaces = 5
-max_tables = 10
-max_catalogs = 2
-
-# Analytics Buckets is available to Supabase Pro plan.
-# [storage.analytics.buckets.my-warehouse]
-
-# Store vector embeddings in S3 for large and durable datasets
 [storage.vector]
 enabled = true
 max_buckets = 10
@@ -182,7 +157,6 @@ enable_manual_linking = false
 minimum_password_length = 6
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
-password_requirements = ""
 
 # Configure passkey sign-ins.
 # [auth.passkey]
@@ -293,39 +267,6 @@ max_frequency = "5s"
 # uri = "pg-functions://<database>/<schema>/<hook_name>"
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
-[auth.sms.twilio]
-enabled = false
-account_sid = ""
-message_service_sid = ""
-# DO NOT commit your Twilio auth token to git. Use environment variable substitution instead:
-auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
-
-# Multi-factor-authentication is available to Supabase Pro plan.
-[auth.mfa]
-# Control how many MFA factors can be enrolled at once per user.
-max_enrolled_factors = 10
-
-# Control MFA via App Authenticator (TOTP)
-[auth.mfa.totp]
-enroll_enabled = false
-verify_enabled = false
-
-# Configure MFA via Phone Messaging
-[auth.mfa.phone]
-enroll_enabled = false
-verify_enabled = false
-otp_length = 6
-template = "Your code is {{ .Code }}"
-max_frequency = "5s"
-
-# Configure MFA via WebAuthn
-# [auth.mfa.web_authn]
-# enroll_enabled = true
-# verify_enabled = true
-
-# Use an external OAuth provider. The full list of providers are: `apple`, `azure`, `bitbucket`,
-# `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
-# `twitter`, `x`, `slack`, `spotify`, `workos`, `zoom`.
 [auth.external.apple]
 enabled = false
 client_id = ""
@@ -421,3 +362,14 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+# ---- Override cho project hosted (`supabase config push`). Chỉ liệt kê thứ khác local. ----
+[remotes.production]
+project_id = "hxwyavivnlypdxgquovz"
+
+[remotes.production.auth]
+site_url = "https://github.com/wsunicorn/anchor-handoff"
+
+[remotes.production.auth.email]
+# Rate-limit gửi email của hosted giữ 1 phút (local 1s để test).
+max_frequency = "1m0s"
