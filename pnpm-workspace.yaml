@@ -2,9 +2,9 @@
 # thấy hai đường dẫn khác nhau cho cùng một file qua junction và báo "build.ninja still dirty".
 nodeLinker: hoisted
 
-# pnpm chặn postinstall mặc định. Chỉ cho phép gói thật sự cần chạy script:
-# @sentry/cli tải binary để upload sourcemap lúc build; esbuild là runtime của tsx.
+# pnpm chặn postinstall mặc định và trên CI (CI=true) coi gói chưa duyệt là lỗi
+# ERR_PNPM_IGNORED_BUILDS — nên mọi gói có script phải được khai rõ true/false ở đây.
 allowBuilds:
-  '@sentry/cli': true
-  esbuild: true
-  unrs-resolver: set this to true or false
+  '@sentry/cli': true # tải binary để upload sourcemap lúc build
+  esbuild: true # runtime của tsx
+  unrs-resolver: false # đã có binary theo nền tảng qua optionalDependencies
