@@ -1,0 +1,10 @@
+# React Native/Expo cần node_modules phẳng (không symlink): CMake/ninja trên Windows
+# thấy hai đường dẫn khác nhau cho cùng một file qua junction và báo "build.ninja still dirty".
+nodeLinker: hoisted
+
+# pnpm chặn postinstall mặc định. Chỉ cho phép gói thật sự cần chạy script:
+# @sentry/cli tải binary để upload sourcemap lúc build; esbuild là runtime của tsx.
+allowBuilds:
+  '@sentry/cli': true
+  esbuild: true
+  unrs-resolver: set this to true or false

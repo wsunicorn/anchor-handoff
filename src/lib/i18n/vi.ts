@@ -1,0 +1,58 @@
+/** Khoá phải khớp 1-1 với en.ts. Thiếu một bên là CI fail (pnpm check-i18n). */
+export default {
+  library: {
+    title: 'Thư viện',
+    empty: 'Chưa có tài liệu nào. Thêm một PDF để bắt đầu hỏi.',
+    add: 'Thêm tài liệu',
+    parsing: 'Đang đọc tài liệu…',
+    failedOcr: 'File này không đọc được chữ. Thử bản scan rõ hơn, hoặc bật nhận dạng ký tự.',
+  },
+  ask: {
+    placeholder: 'Hỏi về tài liệu này',
+    thinking: 'Đang tìm trong tài liệu…',
+    insufficient: 'Tài liệu của bạn không nói điều này.',
+    nearestSection: 'Phần gần nhất: trang {{page}}',
+    page: 'tr. {{page}}',
+  },
+  verdict: {
+    grounded: 'Có căn cứ',
+    inferred: 'Suy luận',
+    unsupported: 'Không có trong tài liệu',
+    explain: 'Vì sao có nhãn này',
+  },
+  study: {
+    title: 'Ôn tập',
+    due: '{{count}} thẻ đến hạn',
+    empty: 'Chưa có thẻ nào. Tạo bộ câu hỏi từ một chương để bắt đầu.',
+    offline: 'Đang offline — tiến độ sẽ đồng bộ khi có mạng.',
+  },
+  consent: {
+    title: 'Trước khi dùng tính năng AI',
+    body: 'Nội dung tài liệu bạn hỏi sẽ được gửi tới {{provider}} để xử lý. Bạn có thể tắt tính năng này bất cứ lúc nào trong Cài đặt.',
+    accept: 'Đồng ý và tiếp tục',
+    decline: 'Không, dùng chế độ offline',
+  },
+  auth: {
+    title: 'Đăng nhập bằng email',
+    emailLabel: 'Email',
+    emailPlaceholder: 'ban@vidu.vn',
+    sendLink: 'Gửi mã đăng nhập',
+    sending: 'Đang gửi…',
+    sentTo: 'Đã gửi tới {{email}}. Mở liên kết trong email, hoặc nhập mã 6 số bên dưới.',
+    codeLabel: 'Mã 6 số',
+    verify: 'Xác nhận mã',
+    verifying: 'Đang xác nhận…',
+    changeEmail: 'Dùng email khác',
+    invalidEmail: 'Email chưa đúng định dạng. Kiểm tra lại rồi gửi.',
+    invalidCode: 'Mã không đúng hoặc đã hết hạn. Gửi mã mới rồi thử lại.',
+    sendFailed: 'Chưa gửi được email. Kiểm tra mạng rồi thử lại.',
+    linkFailed: 'Liên kết đăng nhập không còn hiệu lực. Gửi mã mới.',
+    signingIn: 'Đang đăng nhập…',
+    signOut: 'Đăng xuất',
+  },
+  paywall: {
+    quotaReached: 'Hết lượt hỏi của tháng này.',
+    trial: 'Dùng thử {{days}} ngày',
+    restore: 'Khôi phục giao dịch',
+  },
+} as const;

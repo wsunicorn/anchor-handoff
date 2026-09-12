@@ -1,0 +1,29 @@
+node_modules/
+.expo/
+dist/
+web-build/
+*.log
+.env
+.env.local
+.env.*.local
+ios/
+android/
+.DS_Store
+services/ingest/.venv/
+services/ingest/__pycache__/
+eval/out/
+
+# Ảnh chụp màn hình do device loop sinh ra
+docs/shots/
+
+# Cấu hình Claude Code cục bộ theo máy
+.claude/settings.local.json
+
+# Expo
+.expo/
+expo-env.d.ts
+.expo-build.log
+.metro.log
+.supabase-start.log
+supabase/.branches/
+supabase/.temp/

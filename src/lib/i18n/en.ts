@@ -1,0 +1,58 @@
+/** Keys must match vi.ts one-to-one. A missing key on either side fails CI. */
+export default {
+  library: {
+    title: 'Library',
+    empty: 'No documents yet. Add a PDF to start asking.',
+    add: 'Add document',
+    parsing: 'Reading your document…',
+    failedOcr: 'No text found in this file. Try a clearer scan, or turn on text recognition.',
+  },
+  ask: {
+    placeholder: 'Ask about this document',
+    thinking: 'Searching your document…',
+    insufficient: 'Your document does not say this.',
+    nearestSection: 'Closest section: page {{page}}',
+    page: 'p. {{page}}',
+  },
+  verdict: {
+    grounded: 'Grounded',
+    inferred: 'Inferred',
+    unsupported: 'Not in your document',
+    explain: 'Why this label',
+  },
+  study: {
+    title: 'Study',
+    due: '{{count}} cards due',
+    empty: 'No cards yet. Generate questions from a chapter to start.',
+    offline: 'Offline — progress syncs when you reconnect.',
+  },
+  consent: {
+    title: 'Before you use AI features',
+    body: 'The document text you ask about is sent to {{provider}} for processing. You can turn this off any time in Settings.',
+    accept: 'Agree and continue',
+    decline: 'No, stay offline',
+  },
+  auth: {
+    title: 'Sign in with email',
+    emailLabel: 'Email',
+    emailPlaceholder: 'you@example.com',
+    sendLink: 'Send sign-in code',
+    sending: 'Sending…',
+    sentTo: 'Sent to {{email}}. Open the link in the email, or enter the 6-digit code below.',
+    codeLabel: '6-digit code',
+    verify: 'Confirm code',
+    verifying: 'Confirming…',
+    changeEmail: 'Use a different email',
+    invalidEmail: 'That email doesn’t look right. Check it and send again.',
+    invalidCode: 'Wrong or expired code. Send a new code and try again.',
+    sendFailed: 'Couldn’t send the email. Check your connection and try again.',
+    linkFailed: 'That sign-in link is no longer valid. Send a new code.',
+    signingIn: 'Signing in…',
+    signOut: 'Sign out',
+  },
+  paywall: {
+    quotaReached: "You've used this month's questions.",
+    trial: '{{days}}-day trial',
+    restore: 'Restore purchases',
+  },
+} as const;

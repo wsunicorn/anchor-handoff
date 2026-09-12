@@ -1,0 +1,177 @@
+# TASKS.md
+
+> **Cổng hiện tại: G0** — cập nhật dòng này ở cuối mỗi phiên.
+> Quy tắc: chỉ làm task trong cổng hiện tại. Đóng cổng bằng "Tiêu chí thoát", không phải bằng cảm giác xong.
+
+Ước lượng dưới đây tính theo ~12 giờ/tuần. Tổng khoảng 13 tuần đến khi nộp store.
+
+---
+
+## G0 — Nền móng (tuần 1)
+
+- [x] G0.1 Khởi tạo Expo + TypeScript strict + Expo Router + alias `@/`
+- [x] G0.2 Cài NativeWind v4, nạp token từ `docs/DESIGN.md` vào `src/theme/tokens.ts` và `tailwind.config.js`
+- [x] G0.3 Nạp font Be Vietnam Pro + Source Serif 4, kiểm tra dấu tiếng Việt ở mọi weight sẽ dùng
+- [x] G0.4 Dựng i18n (`i18next` + `expo-localization`), viết script `check-i18n` phát hiện khoá thiếu một ngôn ngữ
+- [ ] G0.5 Tạo dự án Supabase, bật `pgvector`, migration `0001_init.sql` theo SPEC §4 — *local xong; project hosted chờ câu hỏi #1*
+- [x] G0.6 Auth: email magic link + Sign in with Apple (bắt buộc nếu có đăng nhập mạng xã hội) — *v1 không có social login nên chưa cần Apple; xem câu hỏi #2*
+- [x] G0.7 Bật RLS cho mọi bảng, viết test khẳng định user A không đọc được tài liệu của user B
+- [x] G0.8 Sentry + PostHog, gắn `user_id` giả danh (không gắn email) — *code xong, SDK tắt tới khi có key (câu hỏi #3)*
+- [x] G0.9 GitHub Actions: typecheck + lint + unit test + `check-i18n` — *4 lệnh xanh local; lần chạy CI đầu cần push*
+
+**Tiêu chí thoát G0:** `pnpm typecheck && pnpm test && pnpm check-i18n` xanh trên CI; build dev client chạy được trên máy Android thật; test RLS chứng minh cách ly dữ liệu giữa hai tài khoản.
+
+---
+
+## G1 — Nạp tài liệu và đọc (tuần 2–3)
+
+- [ ] G1.1 Dựng `services/ingest` FastAPI: nhận PDF → PyMuPDF trích text theo block kèm `(page, x0, y0, x1, y1)`
+- [ ] G1.2 Render mỗi trang thành PNG ~1600px, đẩy lên Supabase Storage
+- [ ] G1.3 Phát hiện PDF scan (text rỗng) → chạy OCR (Tesseract `vie+eng`), giữ nguyên toạ độ
+- [ ] G1.4 Chunking theo SPEC §5: cửa sổ ~700 token, chồng lấn 15%, không cắt giữa câu, mỗi chunk giữ danh sách bbox
+- [ ] G1.5 Sinh embedding, ghi vào `chunks` với chỉ mục HNSW; cache theo `sha256` file — file trùng không xử lý lại
+- [ ] G1.6 Màn hình Thư viện: chọn file (`expo-document-picker`), theo dõi tiến trình nạp, trạng thái lỗi rõ ràng
+- [ ] G1.7 Màn hình Đọc: xem ảnh trang, cuộn mượt bằng FlashList, zoom bằng gesture
+- [ ] G1.8 Vẽ lớp phủ highlight từ bbox lên ảnh trang (đây là nền để trích dẫn nhảy đúng chỗ ở G2)
+- [ ] G1.9 Màn hình đồng ý AI: nêu rõ mô hình bên thứ ba nào nhận dữ liệu, dữ liệu gì, cách tắt. Chặn mọi lời gọi LLM cho tới khi người dùng đồng ý
+- [ ] G1.10 Giới hạn nạp: 1 tài liệu, tối đa 80 trang cho người chưa trả tiền (kiểm ở server, không kiểm ở client)
+
+**Tiêu chí thoát G1:** nạp 5 tài liệu thật (2 PDF text tiếng Việt, 1 slide, 1 PDF scan, 1 tiếng Anh) — cả 5 ra chunk có toạ độ; chạm vào một chunk bất kỳ thì Reader nhảy đúng trang và highlight đúng vùng; lời gọi LLM bị chặn khi chưa đồng ý.
+
+---
+
+## G2 — Hỏi đáp có trích dẫn (tuần 4–5)
+
+- [ ] G2.1 Edge Function `ask`: nhận `{document_id, question, lang}`, trả stream
+- [ ] G2.2 Truy hồi lai: BM25 (`tsvector`, cấu hình `simple` cho tiếng Việt) + vector, hợp nhất bằng RRF
+- [ ] G2.3 Rerank top 20 → 6 bằng cross-encoder rẻ hoặc model nhỏ; đo lại chất lượng trước/sau
+- [ ] G2.4 Prompt trả lời: bắt buộc mọi câu khẳng định kèm mã chunk `[c3]`; cấm dùng kiến thức ngoài tài liệu; trả lời theo ngôn ngữ giao diện dù tài liệu khác ngôn ngữ
+- [ ] G2.5 Parser chuyển `[c3]` thành đối tượng trích dẫn có `page` + `bbox`
+- [ ] G2.6 UI trả lời: thanh neo dọc bên trái mỗi đoạn (DESIGN §4), chạm trích dẫn → mở Reader đúng trang, highlight
+- [ ] G2.7 Cache câu trả lời theo `hash(document_id + câu hỏi chuẩn hoá + lang)`
+- [ ] G2.8 Hạn mức theo tầng, đếm ở server, trả lỗi `quota_exceeded` có cấu trúc
+- [ ] G2.9 Dựng `eval/golden.jsonl`: 100 cặp hỏi–đáp (50 vi, 50 en) từ tài liệu thật, trong đó **20 câu tài liệu không trả lời được** (bẫy bịa)
+- [ ] G2.10 Script `pnpm eval:rag` in ra: recall@6, citation precision, tỉ lệ câu không có căn cứ, tỉ lệ từ chối đúng
+
+**Tiêu chí thoát G2:** trên bộ vàng — recall@6 ≥ 0.85; citation precision ≥ 0.90; với 20 câu bẫy, tỉ lệ từ chối đúng ≥ 0.80. Chưa đạt thì ở lại G2, chỉnh truy hồi trước, chỉnh prompt sau.
+
+---
+
+## G3 — Lớp kiểm chứng (tuần 6)
+
+Đây là phần khác biệt của sản phẩm. Không rút gọn.
+
+- [ ] G3.1 Tách câu trả lời thành mệnh đề; mỗi mệnh đề gắn với chunk nó trích dẫn
+- [ ] G3.2 Kiểm tra kéo theo (entailment) từng mệnh đề với chunk đã trích, bằng model rẻ chạy batch một lượt
+- [ ] G3.3 Quy đổi thành ba mức: **Có căn cứ / Suy luận / Không có trong tài liệu**
+- [ ] G3.4 Mệnh đề mức 3: không hiển thị như câu trả lời, thay bằng dòng "Tài liệu của bạn không nói điều này" kèm gợi ý phần gần nhất
+- [ ] G3.5 Thanh neo đổi màu theo mức; chạm vào thanh mở bảng giải thích vì sao ở mức đó
+- [ ] G3.6 Ghi mỗi lượt verify vào bảng `verifications` để đo trôi chất lượng theo thời gian
+- [ ] G3.7 `pnpm eval:gate` trả mã lỗi khác 0 khi vượt ngưỡng SPEC §7; cắm vào CI
+
+**Tiêu chí thoát G3:** tỉ lệ mệnh đề không có căn cứ mà vẫn lọt ra UI ≤ 3% trên bộ vàng; `eval:gate` chạy trong CI và thực sự chặn được một commit cố tình làm hỏng prompt (thử một lần để chứng minh cổng hoạt động).
+
+---
+
+## G4 — Ôn tập chủ động (tuần 7–8)
+
+- [ ] G4.1 Edge Function `generate-quiz`: sinh câu hỏi theo chương/khoảng trang, mỗi câu kèm trích dẫn nguồn và lời giải thích
+- [ ] G4.2 Bộ lọc chất lượng: loại câu mơ hồ, câu có đáp án nằm ngay trong đề, câu trùng ý
+- [ ] G4.3 Sinh một lần, lưu lại, dùng lại — không gọi LLM mỗi lần người dùng ôn
+- [ ] G4.4 Lược đồ SQLite cục bộ + Drizzle; đồng bộ hai chiều với Supabase khi có mạng
+- [ ] G4.5 Cài FSRS cho lịch lặp lại ngắt quãng; unit test cho bộ lập lịch
+- [ ] G4.6 Màn hình ôn: một thẻ một màn, cử chỉ vuốt, haptic khi chấm, hoạt ảnh lật thẻ
+- [ ] G4.7 Chế độ offline hoàn toàn cho phần ôn tập (máy bay vẫn học được)
+- [ ] G4.8 Màn hình tiến độ: số thẻ đến hạn, chuỗi ngày, độ phủ theo chương
+
+**Tiêu chí thoát G4:** bật chế độ máy bay, ôn trọn 30 thẻ, bật mạng lại, dữ liệu đồng bộ không mất và không nhân đôi; sinh quiz cho một chương 20 trang cho ra ≥ 15 câu đạt bộ lọc.
+
+---
+
+## G5 — Chấm tự luận (tuần 9)
+
+- [ ] G5.1 Nhập bài: gõ tay hoặc chụp ảnh bài viết tay → OCR
+- [ ] G5.2 Rubric mặc định 4 tiêu chí (đúng nội dung / đủ ý / lập luận / diễn đạt), cho phép người dùng sửa trọng số
+- [ ] G5.3 Edge Function `grade-essay`: chấm theo rubric, mỗi nhận xét phải trích dẫn về tài liệu nguồn
+- [ ] G5.4 Chạy nhận xét qua đúng lớp kiểm chứng của G3
+- [ ] G5.5 UI kết quả: nhận xét neo vào từng đoạn của bài viết, không phải một khối văn bản dài
+- [ ] G5.6 Ghi rõ trong UI: phản hồi tham khảo, không phải điểm chính thức
+
+**Tiêu chí thoát G5:** chấm 10 bài thật, 10/10 nhận xét đều có trích dẫn hợp lệ về tài liệu; không nhận xét nào bị lớp kiểm chứng đánh mức 3 mà vẫn hiển thị.
+
+---
+
+## G6 — Kiếm tiền và tiết giảm chi phí (tuần 10)
+
+- [ ] G6.1 Tích hợp RevenueCat, ba gói: tháng / năm / trọn đời
+- [ ] G6.2 Paywall cứng sau onboarding, kèm dùng thử dài (xem ADR-0001 §5)
+- [ ] G6.3 Hạn mức và định tuyến model theo tầng, áp ở Edge Function
+- [ ] G6.4 Bảng `usage_costs`: ghi token và chi phí ước tính mỗi lời gọi, theo `user_id`
+- [ ] G6.5 Dashboard nội bộ: chi phí trung bình mỗi người dùng hoạt động, biên lợi nhuận gộp theo tầng
+- [ ] G6.6 Ngắt mạch: người dùng vượt trần chi phí ngày → hạ xuống model rẻ hơn thay vì chặn hẳn
+- [ ] G6.7 Khôi phục mua hàng, xử lý lỗi thanh toán (đây là nguyên nhân lớn của huỷ trên Google Play)
+
+**Tiêu chí thoát G6:** mua thử sandbox thành công trên cả Android và iOS; dashboard cho ra con số chi phí thật của 7 ngày dùng nội bộ; biên gộp ước tính ≥ 70% ở gói năm.
+
+---
+
+## G7 — Đánh bóng và chuẩn bị nộp (tuần 11–12)
+
+- [ ] G7.1 Rà toàn bộ UI theo `docs/DESIGN.md`: không hex rời, không chuỗi hardcode
+- [ ] G7.2 Trạng thái rỗng, trạng thái lỗi, trạng thái đang tải cho **mọi** màn hình
+- [ ] G7.3 Tiếp cận: kích thước chạm ≥ 44pt, tương phản AA, tôn trọng "giảm chuyển động", VoiceOver/TalkBack cho luồng chính
+- [ ] G7.4 Hiệu năng: mở tài liệu 200 trang không nghẽn, danh sách 500 thẻ cuộn 60fps
+- [ ] G7.5 Chống rớt hạng theo Guideline 4.2: dùng ít nhất một tính năng nền tảng gốc trong 30 giây đầu (Share Extension nhận PDF từ app khác, Live Activity hiển thị tiến độ nạp, Shortcuts)
+- [ ] G7.6 Chính sách riêng tư + điều khoản, có đường xoá tài khoản trong app
+- [ ] G7.7 Bộ ảnh chụp màn hình cửa hàng, hai ngôn ngữ, nêu bật lớp trích dẫn
+- [ ] G7.8 Video quay màn hình + danh sách dịch vụ bên thứ ba, chuẩn bị sẵn cho yêu cầu bổ sung thông tin của Apple
+- [ ] G7.9 Đợt thử nghiệm khép kín 10–20 người thật, thu phản hồi có cấu trúc
+
+**Tiêu chí thoát G7:** không lỗi P0 tồn đọng; 10 người thử dùng được mà không cần hướng dẫn miệng; toàn bộ tài liệu nộp store đã sẵn sàng.
+
+---
+
+## G8 — Phát hành (tuần 13)
+
+- [ ] G8.1 Nộp TestFlight, xử lý phản hồi review
+- [ ] G8.2 Nộp Google Play (thử nghiệm nội bộ → mở)
+- [ ] G8.3 Bật phát hành theo giai đoạn, theo dõi crash 72 giờ đầu
+- [ ] G8.4 Theo dõi phễu: cài → nạp tài liệu đầu tiên → câu hỏi đầu tiên → dùng thử → trả tiền
+- [ ] G8.5 Chốt số liệu nền của tuần đầu để so sánh về sau
+
+**Tiêu chí thoát G8:** app sống trên cả hai cửa hàng, crash-free ≥ 99%, phễu đã có số liệu.
+
+---
+
+## Sau v1 — chưa lên lịch
+
+- BYOK cho người dùng nâng cao (xem ADR-0001 §6)
+- Chia sẻ bộ thẻ giữa các bạn học
+- Nhập từ Google Drive / Notion
+- Tóm tắt chương dạng sơ đồ
+- Web app dùng chung backend (41% app dẫn đầu có doanh thu qua web)
+
+---
+
+## Nhật ký
+
+| Ngày | Task | File đổi | Ghi chú |
+|---|---|---|---|
+| 2026-09-12 | G0.0 | `.mcp.json`, `docs/DEVICE-LOOP.md`, `.gitignore` | Vòng lặp thiết bị chạy: mobile-mcp thấy AVD `anchor_pixel10_api37` (Android 17), ảnh `docs/shots/G0.0-loop-smoke.png`. Repo bị thừa một cấp `anchor/`, đã dời lên gốc. `git init` + remote `wsunicorn/anchor-handoff`, chưa commit. |
+| 2026-09-12 | G0.1 | `package.json`, `app.json`, `tsconfig.json`, `pnpm-workspace.yaml`, `app/_layout.tsx`, `app/index.tsx`, `assets/` | Expo SDK 57 / RN 0.86 / TS 6, Expo Router + typed routes, `strict` + `noUncheckedIndexedAccess`, alias `@/*`→`src/*` (TS 6 bỏ `baseUrl`, dùng `paths` tương đối). Kiểm: `pnpm typecheck` xanh; dev client cài và chạy trên emulator, snapshot thấy đúng route `index`, ảnh `docs/shots/G0.1-expo-router-alias.png` — màu token đúng. **Bất ngờ 1:** `JAVA_HOME` của máy trỏ tới `…\Javain` thay vì gốc JDK → Gradle từ chối; phải export `JAVA_HOME=D:\StudyDocument\BigData\CK\setup\Java` (JDK 17) — cần sửa biến hệ thống. **Bất ngờ 2:** pnpm 12 không đọc `node-linker` từ `.npmrc`; symlink trong `node_modules` làm CMake/ninja trên Windows fail `build.ninja still dirty` ở `react-native-screens`/`worklets`. Sửa bằng `pnpm-workspace.yaml` → `nodeLinker: hoisted`, xoá `node_modules` + `android/` cài lại: build 3m36s. Package id tạm `com.anchor.app`, chốt lại trước G7. Màn `app/index.tsx` là placeholder hardcode chuỗi, thay ở G1.6 sau khi có i18n (G0.4). |
+| 2026-09-12 | G0.2 | `tailwind.config.js`, `global.css`, `babel.config.js`, `metro.config.js`, `nativewind-env.d.ts`, `app/_layout.tsx`, `app/index.tsx`, `package.json` | NativeWind 4.2.6 + Tailwind 3.4.19 + Reanimated 4.5.1/Worklets 0.10.1 (bản `expo install` chọn cho SDK 57). `tokens.ts` đã khớp DESIGN.md nên không sửa; `tailwind.config.js` **nạp thẳng** `tokens.ts` qua `jiti` — không có hex nào trong config. Màu ra CSS variable, `darkMode: 'media'` + `@media (prefers-color-scheme: dark)` trong plugin `addBase` → component chỉ viết `bg-paper`, không cần `dark:`. Bảng màu Tailwind mặc định bị **thay** (không extend) để `bg-red-500` không tồn tại. Class thang chữ `text-screenTitle`… gồm cỡ+giãn dòng+weight; `border-l-rail`, `pl-rail-gap` cho thanh neo. Kiểm: snapshot lề 20pt và rail 2+12pt đúng pixel; ảnh `docs/shots/G0.2-nativewind-light.png` và `-dark.png` (bật Dark theme bằng `adb shell cmd uimode night yes`). **Bất ngờ:** Metro nền giữ khoá file → `pnpm add` "Access is denied", phải tắt Metro trước; đổi phiên bản worklets để lại `.cxx` cũ → ninja thiếu `libworklets.so`, phải xoá `node_modules/*/android/{build,.cxx}` rồi build lại. Màn placeholder chưa dùng safe-area (tiêu đề chạm status bar) — chấp nhận vì thay ở G1.6; font hệ thống vì G0.3 mới nạp font. |
+| 2026-09-12 | G0.3 | `assets/fonts/*` (5 TTF + 2 OFL), `app.json` (plugin `expo-font`), `src/theme/tokens.ts` (`font.sans/serif`), `tailwind.config.js`, `app/index.tsx` | Nhúng font **native** qua plugin `expo-font` thay vì `useFonts` runtime: không nháy chữ khi mở app, và một `fontFamily` + `fontWeight` chọn đúng mặt chữ (Android: XML font-family + `ReactFontManager.addCustomFont`; iOS: tên họ trong TTF). Vì thế `font.sans/serif` trong tokens đổi thành tên họ thật `'Be Vietnam Pro'` / `'Source Serif 4'`. Chỉ nhúng weight sẽ dùng: BVP 400/500/600, SS4 400 + 400 Italic (~940 KB). Thang chữ đổi từ `text-<vai>` sang **`type-<vai>`** (gồm family+size+lineHeight+weight) vì RN không kế thừa font, và xoá hẳn `fontSize`/`fontWeight` mặc định của Tailwind → không tồn tại `text-lg`/`font-bold`. Kiểm: ảnh `docs/shots/G0.3-fonts-top.png` (28/20pt, weight 600) và `G0.3-fonts-serif.png` (17/16/15/13pt, weight 400/500, serif + italic): dấu chồng Ố/Ằ/Ễ không cắt, không chạm đuôi g/y dòng trên ở mọi vai. **Bất ngờ:** Source Serif 4 không lên lúc đầu — CSS `font-family: Source Serif 4` không hợp lệ vì `4` là số, NativeWind bỏ khai báo; phải quote tên họ trong tailwind config. iOS chưa kiểm (không có máy ảo trên Windows) — kết luận iOS là suy đoán, kiểm khi có iPhone. |
+| 2026-09-12 | G0.4 | `src/lib/i18n/index.ts`, `src/lib/i18n/i18next.d.ts`, `scripts/check-i18n.ts`, `package.json`, `app.json` (plugin `expo-localization`), `app/_layout.tsx`, `app/index.tsx` | i18next 26 + react-i18next 17 + expo-localization. Ngôn ngữ khởi tạo theo máy (`vi` → vi, khác → en), `setAppLanguage()` để màn Cài đặt dùng sau (SPEC §8) — lưu lựa chọn để lại cho màn đó. **Khoá có kiểu** qua `CustomTypeOptions` lấy `vi.ts` làm chuẩn: `t('library.titel')` là lỗi TS (đã thử). `pnpm check-i18n` (chạy bằng `tsx`) so khoá hai chiều + chuỗi rỗng + **placeholder `{{…}}` lệch giữa hai bên**; đã chứng minh chặn: thêm khoá lẻ và đổi `{{page}}`→`{{pg}}` → exit 1 với 2 lỗi, hoàn lại → OK 25 khoá. Kiểm thiết bị bằng snapshot: locale en → "Library / 3 cards due"; đặt `cmd locale set-app-locales com.anchor.app --locales vi-VN` rồi khởi động lại → "Thư viện / 3 thẻ đến hạn". Không cần screenshot vì là câu hỏi văn bản, không phải thị giác. |
+| 2026-09-12 | G0.5 (local) | `supabase/config.toml`, `package.json` (`db:start`, `db:reset`, devDep `supabase`), `.gitignore` | `supabase init` + `supabase start` (bỏ logflare/vector/imgproxy/supavisor/realtime cho nhẹ; giữ Studio, Auth, Mailpit cho magic link, Edge Runtime cho G2). Migration `0001_init.sql` chạy sạch: pgvector 0.8.2, pg_trgm, 12 bảng đều `relrowsecurity=t`, 12 policy, HNSW index `chunks_vec_idx`. Migration khớp SPEC §4 (thêm `ai_consent_at`, `error`, `unique(owner,sha256)` — hợp lý, không sửa). **Chưa xong:** project hosted cần `supabase login` bằng tài khoản của bạn → câu hỏi #1. Docker Desktop phải chạy trước `pnpm db:start`. |
+| 2026-09-12 | G0.7 | `supabase/tests/rls.test.ts`, `scripts/test-rls.sh`, `vitest.config.mts`, `package.json` (`test`, `test:rls`) | Test RLS bằng Vitest + supabase-js gọi **PostgREST thật** với hai user tạo qua service role (đúng con đường app đi, không phải SQL nội bộ): B đọc 5 bảng → 0 dòng không lỗi; B truy id cụ thể → rỗng; B gọi `search_chunks` trên doc của A → rỗng; B insert doc đứng tên A / chunk vào doc A → `42501`; B update/delete doc A → 0 dòng, A vẫn nguyên; anon → rỗng. 12/12 xanh. **Chứng minh test cắn:** `alter table chunks disable row level security` → 4 test đỏ, bật lại → xanh. `pnpm test` trên CI tự skip test này khi thiếu env (không có Postgres); chạy thật bằng `pnpm test:rls` sau `pnpm db:start`. Cùng migration sẽ `db push` lên hosted nên kết luận giữ nguyên. |
+| 2026-09-12 | G0.6 | `src/lib/supabase.ts`, `src/features/auth/session.ts`, `src/components/{Button,TextField}.tsx`, `app/_layout.tsx`, `app/(auth)/sign-in.tsx`, `app/auth/callback.tsx`, `app/index.tsx`, `src/lib/i18n/{vi,en}.ts` (+16 khoá `auth.*`), `supabase/migrations/0002_profiles_on_signup.sql`, `supabase/config.toml`, `supabase/templates/magic_link.html`, `.env.local`, `.env.example` | Magic link **PKCE** (`anchor://auth/callback?code=…` → `exchangeCodeForSession`) **kèm mã OTP 6 số trong cùng email** làm đường dự phòng (app email mở link sang trình duyệt rồi kẹt là chuyện thường). Session: AsyncStorage + Zustand; gate bằng `Stack.Protected`; giữ splash tới khi đọc xong session. Migration 0002: trigger tạo `profiles` khi có user, `locale` lấy từ metadata app gửi lúc đăng ký. Kiểm trên emulator (snapshot): gửi email → Mailpit nhận đúng subject; **đường OTP**: gõ mã → vào app, `profiles` có dòng `locale=en, tier=free`; **đường deep link**: đăng xuất, gửi lại, mở `anchor://auth/callback?code=…` (Location GoTrue trả về) → vào app; force-stop rồi mở lại → vẫn đăng nhập. Ảnh `docs/shots/G0.6-sign-in.png`. **Bất ngờ:** Chrome trên emulator sạch chặn bằng màn first-run nên không đi được trọn link qua trình duyệt — kiểm đoạn trình duyệt→app trên máy Android thật ở cuối G0. Local cần `adb reverse tcp:54321 tcp:54321`. Hosted: phải thêm `anchor://auth/callback` vào Redirect URLs và dán template magic link ở Dashboard (ghi trong config.toml). |
+| 2026-09-12 | G0.8 | `src/lib/telemetry.ts`, `src/features/auth/session.ts`, `app/_layout.tsx`, `metro.config.js`, `app.json` (plugin `@sentry/react-native/expo`), `pnpm-workspace.yaml` (`allowBuilds`), `.env.example` | Sentry 7.11 + PostHog RN 4.70 + expo-crypto. Định danh = **SHA-256(`anchor:`+uuid)**: ổn định để đếm, không nối ngược về DB/email nếu chỉ có dashboard; `sendDefaultPii:false`, PostHog không autocapture, tắt geoip. Gắn ở `onAuthStateChange`, `reset()` khi đăng xuất, sự kiện `signed_in`. Thiếu key → cả hai SDK tắt hẳn. Kiểm trên emulator: đăng nhập → log `[telemetry] identify 79ce91ef… sentry=false posthog=false`; build native với Sentry OK. Org/project trong plugin là placeholder `anchor/anchor-mobile` — đổi khi có project thật; upload sourcemap chỉ khi có `SENTRY_AUTH_TOKEN`. **Bất ngờ:** pnpm 12 chặn postinstall → phải `allowBuilds` cho `@sentry/cli` và `esbuild` (runtime của tsx). Chưa thấy sự kiện trên dashboard vì chưa có key (câu hỏi #3). |
+| 2026-09-12 | G0.9 | `.github/workflows/ci.yml`, `eslint.config.js`, `.prettierrc`, `package.json` (`lint`, `format`, `packageManager`, `engines`), `scripts/i18n-parity.ts` + `.test.ts`, `supabase/tests/rls.test.ts` | ESLint 9 + `eslint-config-expo` + prettier + simple-import-sort (ESLint 10 chưa tương thích eslint-plugin-react). Lint bắt được lỗi thật: `process.env['X']` không được Expo inline — đã đổi sang `process.env.X` ở supabase.ts/telemetry.ts. Tách logic check-i18n thành `i18n-parity.ts` có 5 unit test (để `pnpm test` có test thật). CI: Node 22, pnpm theo `packageManager`; **thêm job `rls`** chạy Supabase thật bằng `supabase/setup-cli` rồi `pnpm test:rls` — test bảo mật không chỉ tin máy dev; job `rag-gate` gắn `vars.RAG_GATE_ENABLED` vì `eval:gate` chỉ có ở G3.7 (không đổi ý nghĩa cổng, tránh đỏ 6 tuần). Local: `typecheck`, `lint`, `test` (5 pass, 12 RLS skip khi thiếu env), `check-i18n` đều xanh. Chưa có lần chạy CI thật vì repo chưa commit/push. |
+
+## Câu hỏi chờ trả lời
+
+| # | Câu hỏi | Chặn task nào | Trạng thái |
+|---|---|---|---|
+| 1 | Cần tài khoản Supabase của bạn để tạo project hosted: chạy `pnpm exec supabase login` rồi `pnpm exec supabase projects create anchor --org-id <org> --region ap-southeast-1 --db-password <mật khẩu>` và `pnpm exec supabase link --project-ref <ref>`; hoặc đưa tôi `SUPABASE_ACCESS_TOKEN` để tôi làm. Xong thì `supabase db push` áp migration. | G0.5 (hosted), tiêu chí thoát G0 phần "CI xanh" không bị chặn | Chờ |
+| 2 | Auth v1 tôi chọn **chỉ magic link email**, không social login → không kích hoạt yêu cầu Sign in with Apple, không cần Apple Developer account ở G0. Nếu bạn muốn có Google/Apple login ở v1 thì nói, tôi thêm Apple trước khi đóng G0. | Không chặn (đã làm theo phương án mặc định) | Chờ xác nhận |
+| 3 | G0.8 cần DSN Sentry và API key PostHog từ tài khoản của bạn (free tier đủ). Tạo project ở sentry.io (React Native) và posthog.com, dán vào `.env.local`. Tôi vẫn cài SDK và nối code trước bằng giá trị rỗng (SDK tự tắt khi thiếu key). | G0.8 (phần xác nhận sự kiện lên dashboard) | Chờ |

@@ -1,0 +1,61 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4 # đọc bản pnpm từ "packageManager" trong package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm check-i18n
+
+  # Cách ly dữ liệu giữa tài khoản (G0.7). Chạy Supabase thật trong CI: RLS sai là lỗi
+  # bảo mật, không được chỉ tin vào máy dev.
+  rls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: supabase start -x logflare,vector,imgproxy,supavisor,realtime,studio,edge-runtime,storage-api
+      - run: pnpm test:rls
+      - if: always()
+        run: supabase stop --no-backup
+
+  # Cổng chất lượng RAG. Bật bằng repo variable RAG_GATE_ENABLED=true khi G3.7 có `pnpm eval:gate`.
+  # Ngưỡng ở docs/SPEC.md §7. Fail ở đây là chặn phát hành, không phải cảnh báo.
+  rag-gate:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && vars.RAG_GATE_ENABLED == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm eval:gate
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          LLM_PROVIDER_API_KEY: ${{ secrets.LLM_PROVIDER_API_KEY }}
