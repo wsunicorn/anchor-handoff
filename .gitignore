@@ -21,7 +21,6 @@ docs/shots/
 
 # Expo
 .expo/
-expo-env.d.ts
 .expo-build.log
 .metro.log
 .supabase-start.log
