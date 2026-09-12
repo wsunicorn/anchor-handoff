@@ -60,3 +60,9 @@ export function track(event: string, properties?: Record<string, string | number
 
 /** Bọc root layout để Sentry bắt lỗi render và điều hướng. */
 export const wrapRoot = Sentry.wrap;
+
+/** Chỉ để kiểm đường ống ở G0.8: một exception lên Sentry và một event lên PostHog. */
+export function captureTestError(): void {
+  Sentry.captureException(new Error('G0.8 telemetry smoke test'));
+  track('telemetry_smoke_test');
+}

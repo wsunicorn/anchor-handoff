@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { signOut, useSession } from '@/features/auth/session';
+import { captureTestError } from '@/lib/telemetry';
 import { type as typeScale } from '@/theme/tokens';
 
 /**
@@ -44,6 +45,12 @@ export default function Index() {
           </Text>
           <Button label={t('auth.signOut')} variant="secondary" onPress={() => void signOut()} />
         </View>
+        {__DEV__ ? (
+          <View className="mt-sm self-start">
+            {/* Chỉ bản dev: kiểm G0.8 — một event lên Sentry + PostHog. Màn này thay ở G1.6. */}
+            <Button label="Bắn lỗi thử (dev)" variant="secondary" onPress={captureTestError} />
+          </View>
+        ) : null}
 
         {roles.map((role) => {
           const t = typeScale[role];
