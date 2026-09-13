@@ -56,7 +56,7 @@ const Body = z.object({
   nocache: z.boolean().optional(),
 });
 
-const ANSWER_MODEL = Deno.env.get('LLM_MODEL_ANSWER') ?? 'gemini-3.8-flash';
+const ANSWER_MODEL = Deno.env.get('LLM_MODEL_ANSWER') ?? 'gemini-3.5-flash';
 const RERANK_MODEL = Deno.env.get('LLM_MODEL_RERANK') ?? 'gemini-3.5-flash-lite';
 const VERIFY_MODEL = Deno.env.get('LLM_MODEL_VERIFY') ?? 'gemini-3.5-flash-lite';
 const EMBEDDING_MODEL = Deno.env.get('EMBEDDING_MODEL') ?? 'gemini-embedding-2';
@@ -177,7 +177,8 @@ Deno.serve(async (req) => {
               askSystemPrompt(lang),
               askUserPrompt(question, promptChunks),
               (delta) => sse.send('delta', { text: delta }),
-              { maxTokens: MAX_ANSWER_TOKENS },
+              // Trần cứng cao hơn yêu cầu trong prompt (700) để câu cuối không bị cắt giữa chừng.
+              { maxTokens: MAX_ANSWER_TOKENS + 324 },
             )
           : { text: 'INSUFFICIENT', usage: { tokens_in: 0, tokens_out: 0 } };
         if (!top.length) sse.send('delta', { text: result.text });

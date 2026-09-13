@@ -25,9 +25,7 @@ export type PromptChunk = { code: string; page: number; text: string };
 
 /** Phần người dùng cho `ask`: các đoạn đã rerank kèm mã [c1]…[c6] và số trang, rồi câu hỏi. */
 export function askUserPrompt(question: string, chunks: PromptChunk[]): string {
-  const passages = chunks
-    .map((c) => `[${c.code}] (trang ${c.page})\n${c.text}`)
-    .join('\n\n');
+  const passages = chunks.map((c) => `[${c.code}] (trang ${c.page})\n${c.text}`).join('\n\n');
   return `ĐOẠN TRÍCH:\n\n${passages}\n\nCÂU HỎI: ${question}`;
 }
 

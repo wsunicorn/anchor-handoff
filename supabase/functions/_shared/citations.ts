@@ -22,7 +22,8 @@ export type Sentence = {
 
 export type Paragraph = { sentences: Sentence[] };
 
-const CODE_RE = /\[(c\d+)\]/g;
+// Nhận cả `[c1]`, `[c1][c2]`, `[c1, c2]`, `[c1], [c2]`.
+const CODE_RE = /\[(c\d+(?:\s*,\s*c\d+)*)\]/g;
 
 /**
  * Tách văn bản thành câu. Một câu kết thúc ở dấu . ! ? … (không phải số thập phân) cộng
@@ -37,9 +38,10 @@ export function splitSentences(text: string): string[] {
   while (i < src.length) {
     const ch = src[i]!;
     const isEnd = ch === '.' || ch === '!' || ch === '?' || ch === '…';
-    // Số thập phân: "3.14" — chấm kẹp giữa hai chữ số không kết thúc câu.
-    const decimal = ch === '.' && /\d/.test(src[i - 1] ?? '') && /\d/.test(src[i + 1] ?? '');
-    if (!isEnd || decimal) {
+    // Chấm ngay sau chữ số ("3.14", "mục 7.1.", "năm 2004.") không kết thúc câu: cắt thừa làm
+    // mảnh không mã bị ẩn (mất nội dung), gộp thừa chỉ làm câu dài hơn — chọn gộp.
+    const afterDigit = ch === '.' && /\d/.test(src[i - 1] ?? '');
+    if (!isEnd || afterDigit) {
       i += 1;
       continue;
     }
@@ -47,7 +49,7 @@ export function splitSentences(text: string): string[] {
     let j = i + 1;
     while (j < src.length && /[.!?…]/.test(src[j]!)) j += 1;
     for (;;) {
-      const m = /^\s*\[c\d+\]/.exec(src.slice(j));
+      const m = /^\s*,?\s*\[c\d+(?:\s*,\s*c\d+)*\]/.exec(src.slice(j));
       if (!m) break;
       j += m[0].length;
     }
@@ -66,15 +68,21 @@ export function splitSentences(text: string): string[] {
 }
 
 function stripCodes(text: string): string {
-  return text.replace(CODE_RE, '').replace(/\s+([.!?…,;:])/g, '$1').replace(/\s{2,}/g, ' ').trim();
+  return text
+    .replace(/\s*,?\s*\[c\d+(?:\s*,\s*c\d+)*\]/g, '')
+    .replace(/\s+([.!?…,;:])/g, '$1')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
 }
 
 /** Mã trong một câu, theo thứ tự xuất hiện, không trùng. */
 export function codesIn(sentence: string): string[] {
   const seen = new Set<string>();
   for (const m of sentence.matchAll(CODE_RE)) {
-    const code = m[1];
-    if (code) seen.add(code);
+    for (const code of (m[1] ?? '').split(',')) {
+      const c = code.trim();
+      if (c) seen.add(c);
+    }
   }
   return [...seen];
 }

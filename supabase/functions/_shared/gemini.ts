@@ -14,6 +14,8 @@ export const PRICE_PER_M: Record<string, [number, number]> = {
   'gemini-2.5-pro': [1.25, 10],
   'gemini-embedding-001': [0.15, 0],
   // Bản 3.x chọn 2026-09-13; giá lấy theo bậc tương đương 2.5 — đối chiếu bảng giá thật ở G6.
+  // 3.8-flash free tier chỉ 20 lời gọi/ngày (đo 2026-09-13) → dùng 3.5-flash cho trả lời.
+  'gemini-3.5-flash': [0.3, 2.5],
   'gemini-3.8-flash': [0.3, 2.5],
   'gemini-3.5-flash-lite': [0.1, 0.4],
   'gemini-embedding-2': [0.15, 0],
@@ -30,18 +32,25 @@ function apiKey(): string {
   return key;
 }
 
+/** 429 (RPM) thì đợi theo `retryDelay` của Google (tối đa 2 lần, trần 20s); hạn mức ngày thì thua ngay. */
 async function post(path: string, body: unknown, stream = false): Promise<Response> {
   const url = `${BASE}/${path}${stream ? '?alt=sse' : ''}`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey() },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
+  for (let attempt = 0; ; attempt += 1) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey() },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) return res;
     const text = await res.text().catch(() => '');
-    throw new Error(`gemini_${res.status}: ${text.slice(0, 300)}`);
+    if (res.status === 429 && attempt < 2 && !/PerDay/.test(text)) {
+      const m = /"retryDelay":\s*"(\d+)s"/.exec(text);
+      const wait = Math.min(20, m ? Number(m[1]) : 5);
+      await new Promise((r) => setTimeout(r, wait * 1000));
+      continue;
+    }
+    throw new Error(`gemini_${res.status}: ${text.slice(0, 600)}`);
   }
-  return res;
 }
 
 export async function embedQuery(model: string, text: string, dim: number): Promise<number[]> {
@@ -57,8 +66,19 @@ export async function embedQuery(model: string, text: string, dim: number): Prom
 }
 
 type GenerateResult = { text: string; usage: Usage };
+type Part = { text?: string; thought?: boolean };
 
-function usageOf(json: { usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number } }): Usage {
+/** Ghép văn bản, bỏ part suy nghĩ (`thought: true`) — không bao giờ để lọt ra câu trả lời. */
+function textOf(parts: Part[] | undefined): string {
+  return (parts ?? [])
+    .filter((p) => !p.thought)
+    .map((p) => p.text ?? '')
+    .join('');
+}
+
+function usageOf(json: {
+  usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
+}): Usage {
   return {
     tokens_in: json.usageMetadata?.promptTokenCount ?? 0,
     tokens_out: json.usageMetadata?.candidatesTokenCount ?? 0,
@@ -70,7 +90,12 @@ export async function generate(
   model: string,
   system: string,
   user: string,
-  opts: { json?: boolean; maxTokens?: number; temperature?: number } = {},
+  opts: {
+    json?: boolean;
+    maxTokens?: number;
+    temperature?: number;
+    thinkingLevel?: 'minimal' | 'low' | 'medium' | 'high';
+  } = {},
 ): Promise<GenerateResult> {
   const res = await post(`models/${model}:generateContent`, {
     systemInstruction: { parts: [{ text: system }] },
@@ -78,14 +103,18 @@ export async function generate(
     generationConfig: {
       temperature: opts.temperature ?? 0,
       maxOutputTokens: opts.maxTokens ?? 1024,
+      // Model 3.x là model "thinking": phần suy nghĩ ăn vào maxOutputTokens và lộ ra part `thought`.
+      // Các việc ở đây (trả lời có ràng buộc, rerank, verify) không cần suy nghĩ dài → 'minimal'
+      // (thinkingBudget:0 bị API 3.x từ chối — đo 2026-09-13).
+      thinkingConfig: { thinkingLevel: opts.thinkingLevel ?? 'minimal' },
       ...(opts.json ? { responseMimeType: 'application/json' } : {}),
     },
   });
   const json = (await res.json()) as {
-    candidates?: { content?: { parts?: { text?: string }[] } }[];
+    candidates?: { content?: { parts?: Part[] } }[];
     usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
   };
-  const text = json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
+  const text = textOf(json.candidates?.[0]?.content?.parts);
   return { text, usage: usageOf(json) };
 }
 
@@ -98,14 +127,22 @@ export async function generateStream(
   system: string,
   user: string,
   onDelta: (text: string) => void | Promise<void>,
-  opts: { maxTokens?: number; temperature?: number } = {},
+  opts: {
+    maxTokens?: number;
+    temperature?: number;
+    thinkingLevel?: 'minimal' | 'low' | 'medium' | 'high';
+  } = {},
 ): Promise<GenerateResult> {
   const res = await post(
     `models/${model}:streamGenerateContent`,
     {
       systemInstruction: { parts: [{ text: system }] },
       contents: [{ role: 'user', parts: [{ text: user }] }],
-      generationConfig: { temperature: opts.temperature ?? 0, maxOutputTokens: opts.maxTokens ?? 1024 },
+      generationConfig: {
+        temperature: opts.temperature ?? 0,
+        maxOutputTokens: opts.maxTokens ?? 1024,
+        thinkingConfig: { thinkingLevel: opts.thinkingLevel ?? 'minimal' },
+      },
     },
     true,
   );
@@ -126,10 +163,10 @@ export async function generateStream(
       const payload = line.slice(5).trim();
       if (!payload) continue;
       const json = JSON.parse(payload) as {
-        candidates?: { content?: { parts?: { text?: string }[] } }[];
+        candidates?: { content?: { parts?: Part[] } }[];
         usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
       };
-      const delta = json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
+      const delta = textOf(json.candidates?.[0]?.content?.parts);
       if (delta) {
         full += delta;
         await onDelta(delta);

@@ -53,13 +53,25 @@ describe('verifyFromRaw', () => {
   });
 
   it('mệnh đề model không chấm → unsupported (thà ẩn nhầm)', () => {
-    const { answer } = verifyFromRaw('A đúng [c1]. B cũng đúng [c2].', sources, chunkTexts, [{ i: 0, score: 0.9 }], 84);
+    const { answer } = verifyFromRaw(
+      'A đúng [c1]. B cũng đúng [c2].',
+      sources,
+      chunkTexts,
+      [{ i: 0, score: 0.9 }],
+      84,
+    );
     expect(answer.paragraphs[0]!.sentences).toHaveLength(1);
     expect(answer.omitted).toBe(1);
   });
 
   it('không còn câu có trích dẫn nào → insufficient với trang gần nhất', () => {
-    const { answer } = verifyFromRaw('Câu bịa không có mã nào ở đây cả.', sources, chunkTexts, [], 3);
+    const { answer } = verifyFromRaw(
+      'Câu bịa không có mã nào ở đây cả.',
+      sources,
+      chunkTexts,
+      [],
+      3,
+    );
     expect(answer.insufficient).toBe(true);
     expect(answer.nearestPage).toBe(3);
     expect(answer.omitted).toBe(1);
@@ -77,7 +89,11 @@ describe('verifyFromRaw', () => {
 
 describe('parseScores', () => {
   it('bỏ phần tử hỏng, suy điểm từ nhãn khi thiếu score', () => {
-    expect(parseScores('[{"i":0,"verdict":"grounded","score":0.9},{"i":"1","verdict":"inferred"},{"foo":1},{"i":2,"verdict":"unsupported"}]')).toEqual([
+    expect(
+      parseScores(
+        '[{"i":0,"verdict":"grounded","score":0.9},{"i":"1","verdict":"inferred"},{"foo":1},{"i":2,"verdict":"unsupported"}]',
+      ),
+    ).toEqual([
       { i: 0, score: 0.9 },
       { i: 1, score: 0.6 },
       { i: 2, score: 0 },

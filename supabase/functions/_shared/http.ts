@@ -39,7 +39,8 @@ export async function requireUser(req: Request, admin: SupabaseClient): Promise<
   const jwt = auth.replace(/^Bearer\s+/i, '');
   if (!jwt) throw new HttpError(401, 'unauthorized', 'Thiếu token đăng nhập.');
   const { data, error } = await admin.auth.getUser(jwt);
-  if (error || !data.user) throw new HttpError(401, 'unauthorized', 'Token không hợp lệ hoặc đã hết hạn.');
+  if (error || !data.user)
+    throw new HttpError(401, 'unauthorized', 'Token không hợp lệ hoặc đã hết hạn.');
   return data.user.id;
 }
 

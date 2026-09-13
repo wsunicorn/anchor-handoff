@@ -433,15 +433,13 @@ function diff(): void {
     console.log('Cần ít nhất hai lần chạy trong eval/out.');
     return;
   }
-  const [prev, cur] = files
-    .slice(-2)
-    .map(
-      (f) =>
-        JSON.parse(readFileSync(join(OUT_DIR, f), 'utf8')) as {
-          summary: Record<string, unknown>;
-          results: ItemResult[];
-        },
-    );
+  const [prev, cur] = files.slice(-2).map(
+    (f) =>
+      JSON.parse(readFileSync(join(OUT_DIR, f), 'utf8')) as {
+        summary: Record<string, unknown>;
+        results: ItemResult[];
+      },
+  );
   console.log(`So sánh ${files.at(-2)} → ${files.at(-1)}`);
   for (const k of [
     'recall_at_6',

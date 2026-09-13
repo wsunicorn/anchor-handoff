@@ -19,7 +19,10 @@ const sources = { c1: src('c1', 84), c2: src('c2', 85), c3: src('c3', 90) };
 
 describe('parseAnswer', () => {
   it('gắn mã cuối câu vào đúng câu, bỏ mã khỏi văn bản', () => {
-    const p = parseAnswer('Độ co giãn là tỉ số phần trăm [c1]. Công thức ở trang sau [c2][c3].', sources);
+    const p = parseAnswer(
+      'Độ co giãn là tỉ số phần trăm [c1]. Công thức ở trang sau [c2][c3].',
+      sources,
+    );
     expect(p).toHaveLength(1);
     const [a, b] = p[0]!.sentences;
     expect(a!.text).toBe('Độ co giãn là tỉ số phần trăm.');
@@ -35,11 +38,23 @@ describe('parseAnswer', () => {
   });
 
   it('câu khẳng định không có mã → uncited; mã bịa [c9] bị bỏ', () => {
-    const p = parseAnswer('Đây là một câu khẳng định không có nguồn nào cả. Câu này trích mã bịa [c9].', sources);
+    const p = parseAnswer(
+      'Đây là một câu khẳng định không có nguồn nào cả. Câu này trích mã bịa [c9].',
+      sources,
+    );
     expect(p[0]!.sentences[0]!.uncited).toBe(true);
     expect(p[0]!.sentences[1]!.citations).toEqual([]);
     expect(p[0]!.sentences[1]!.uncited).toBe(true);
     expect(p[0]!.sentences[1]!.text).toBe('Câu này trích mã bịa.');
+  });
+
+  it('không cắt câu tại số mục "7.1." — danh sách liệt kê giữ nguyên một câu', () => {
+    const p = parseAnswer(
+      'Chương 7 gồm: 7.1. Cấu tạo nguyên tử, 7.2. Cấu tạo hạt nhân [c1].',
+      sources,
+    );
+    expect(p[0]!.sentences).toHaveLength(1);
+    expect(p[0]!.sentences[0]!.citations).toHaveLength(1);
   });
 
   it('tách đoạn theo dòng trống, không tách sau số thập phân', () => {
@@ -58,6 +73,14 @@ describe('parseAnswer', () => {
 describe('helpers', () => {
   it('codesIn giữ thứ tự và bỏ trùng', () => {
     expect(codesIn('a [c2] b [c1] c [c2]')).toEqual(['c2', 'c1']);
+  });
+
+  it('nhận các biến thể [c1, c2], [c1][c2], [c1], [c5]', () => {
+    expect(codesIn('x [c1, c2].')).toEqual(['c1', 'c2']);
+    expect(codesIn('x [c1][c2].')).toEqual(['c1', 'c2']);
+    const p = parseAnswer('Định lý ở chương 1 [c1, c2]. Hết [c1], [c2].', sources);
+    expect(p[0]!.sentences.map((s) => s.text)).toEqual(['Định lý ở chương 1.', 'Hết.']);
+    expect(p[0]!.sentences[1]!.citations.map((c) => c.code)).toEqual(['c1', 'c2']);
   });
 
   it('splitSentences giữ mã liền sau dấu câu cho câu trước', () => {
