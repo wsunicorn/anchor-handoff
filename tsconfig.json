@@ -6,7 +6,8 @@
     "paths": {
       "@/*": ["./src/*"],
       "@shared/*": ["./supabase/functions/_shared/*"]
-    }
+    },
+    "allowImportingTsExtensions": true
   },
   "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "nativewind-env.d.ts"],
   "exclude": [

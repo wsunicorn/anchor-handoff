@@ -1,4 +1,5 @@
 import type { CitationSource } from '@shared/citations';
+import type { VerifiedAnswer } from '@shared/verify';
 
 /**
  * Client SSE cho Edge Function `ask`. Không phụ thuộc React Native — script eval (Node)
@@ -18,6 +19,7 @@ export type AskErrorBody = { code: string; message: string; [k: string]: unknown
 export type AskEvent =
   | { type: 'meta'; data: AskMeta }
   | { type: 'delta'; data: { text: string } }
+  | { type: 'verified'; data: { answer: VerifiedAnswer } }
   | { type: 'done'; data: AskDone }
   | { type: 'error'; data: AskErrorBody };
 
@@ -93,6 +95,8 @@ function parseBlock(block: string): AskEvent | null {
       return { type, data: parsed as AskMeta };
     case 'delta':
       return { type, data: parsed as { text: string } };
+    case 'verified':
+      return { type, data: parsed as { answer: VerifiedAnswer } };
     case 'done':
       return { type, data: parsed as AskDone };
     case 'error':
@@ -108,10 +112,17 @@ export async function askOnce(
   anonKey: string,
   jwt: string,
   input: AskInput,
-): Promise<{ meta: AskMeta | null; text: string; done: AskDone | null; ttft_ms: number | null }> {
+): Promise<{
+  meta: AskMeta | null;
+  text: string;
+  verified: VerifiedAnswer | null;
+  done: AskDone | null;
+  ttft_ms: number | null;
+}> {
   const started = Date.now();
   let meta: AskMeta | null = null;
   let text = '';
+  let verified: VerifiedAnswer | null = null;
   let done: AskDone | null = null;
   let ttft: number | null = null;
   for await (const ev of askStream(functionsUrl, anonKey, jwt, input)) {
@@ -119,8 +130,9 @@ export async function askOnce(
     else if (ev.type === 'delta') {
       if (ttft === null) ttft = Date.now() - started;
       text += ev.data.text;
-    } else if (ev.type === 'done') done = ev.data;
+    } else if (ev.type === 'verified') verified = ev.data.answer;
+    else if (ev.type === 'done') done = ev.data;
     else if (ev.type === 'error') throw new AskError(ev.data.code, ev.data.message, ev.data);
   }
-  return { meta, text, done, ttft_ms: ttft };
+  return { meta, text, verified, done, ttft_ms: ttft };
 }

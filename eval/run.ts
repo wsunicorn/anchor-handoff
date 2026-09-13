@@ -38,7 +38,9 @@ type ItemResult = {
   insufficient: boolean;
   retrieved_pages: number[];
   recall_hit: boolean | null;
-  citation: { pass: number; fail: number; ambiguous: string[] } | null;
+  citation: { pass: number; fail: number; ambiguous: string[] } | null; // trên câu đã kiểm chứng (UI thấy)
+  citation_raw: { pass: number; fail: number; ambiguous: string[] } | null; // trên văn bản thô (chẩn đoán)
+  omitted: number;
   must_not_say_hit: string[];
   gist_hit: boolean | null;
   ttft_ms: number | null;
@@ -46,7 +48,13 @@ type ItemResult = {
   answer: string;
 };
 
-const THRESHOLDS = { recall_at_6: 0.85, citation_precision: 0.9, refusal_accuracy: 0.8, ttft_p95_ms: 2500 };
+const THRESHOLDS = {
+  recall_at_6: 0.85,
+  citation_precision: 0.9,
+  unsupported_leak: 0.03,
+  refusal_accuracy: 0.8,
+  ttft_p95_ms: 2500,
+};
 
 const env = (k: string): string => {
   const v = process.env[k];
@@ -56,7 +64,35 @@ const env = (k: string): string => {
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const OUT_DIR = join(ROOT, 'eval', 'out');
-const STOP = new Set(['the', 'and', 'for', 'with', 'that', 'this', 'are', 'was', 'were', 'của', 'và', 'các', 'là', 'cho', 'trong', 'được', 'với', 'một', 'có', 'không', 'theo', 'từ', 'về', 'đến', 'những', 'này', 'đó']);
+const STOP = new Set([
+  'the',
+  'and',
+  'for',
+  'with',
+  'that',
+  'this',
+  'are',
+  'was',
+  'were',
+  'của',
+  'và',
+  'các',
+  'là',
+  'cho',
+  'trong',
+  'được',
+  'với',
+  'một',
+  'có',
+  'không',
+  'theo',
+  'từ',
+  'về',
+  'đến',
+  'những',
+  'này',
+  'đó',
+]);
 
 function tokens(text: string): string[] {
   return text
@@ -88,14 +124,21 @@ async function main(): Promise<void> {
   // 1. Người dùng eval: cố định email, pro + consent, đăng nhập bằng mật khẩu.
   const email = 'eval@anchor.local';
   const password = 'eval-pass-anchor-1';
-  const { data: created } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
+  const { data: created } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  });
   let userId = created.user?.id;
   if (!userId) {
     const { data: list } = await admin.auth.admin.listUsers({ perPage: 1000 });
     userId = list.users.find((u) => u.email === email)?.id;
   }
   if (!userId) throw new Error('không tạo được user eval');
-  await admin.from('profiles').update({ tier: 'pro', ai_consent_at: new Date().toISOString() }).eq('id', userId);
+  await admin
+    .from('profiles')
+    .update({ tier: 'pro', ai_consent_at: new Date().toISOString() })
+    .eq('id', userId);
   const user = createClient(url, anon, { auth: { persistSession: false } });
   const { data: session, error: signErr } = await user.auth.signInWithPassword({ email, password });
   if (signErr || !session.session) throw signErr ?? new Error('đăng nhập eval thất bại');
@@ -106,7 +149,9 @@ async function main(): Promise<void> {
     .split('\n')
     .filter(Boolean)
     .map((l: string) => JSON.parse(l) as Golden);
-  const only = process.env.EVAL_ONLY?.split(',').map((s) => s.trim()).filter(Boolean);
+  const only = process.env.EVAL_ONLY?.split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
   const items = only ? golden.filter((g) => only.includes(g.id)) : golden;
 
   const docIds = new Map<string, string>();
@@ -127,28 +172,50 @@ async function main(): Promise<void> {
         nocache: true,
       });
       const citations = r.meta?.citations ?? {};
-      const retrievedPages = [...new Set(Object.values(citations).map((c) => c.page_no))].sort((a, b) => a - b);
+      const retrievedPages = [...new Set(Object.values(citations).map((c) => c.page_no))].sort(
+        (a, b) => a - b,
+      );
       const insufficient = r.done?.insufficient ?? false;
 
-      let citation: ItemResult['citation'] = null;
-      if (g.answerable && !insufficient) {
-        const chunkTexts = await chunkTextsFor(user, Object.values(citations).map((c) => c.chunk_id));
-        citation = { pass: 0, fail: 0, ambiguous: [] };
-        for (const p of parseAnswer(r.text, citations)) {
-          for (const s of p.sentences) {
-            if (!s.citations.length) {
-              if (s.uncited) citation.fail += 1;
-              continue;
-            }
-            const joined = s.citations.map((c) => chunkTexts.get(c.chunk_id) ?? '').join(' ');
-            const score = overlap(s.text, joined);
-            const numbers = s.text.match(/\d+(?:[.,]\d+)?/g) ?? [];
-            const numbersOk = numbers.every((n) => joined.includes(n));
-            if (score >= 0.5 && numbersOk) citation.pass += 1;
-            else if (score >= 0.3) citation.ambiguous.push(s.text);
-            else citation.fail += 1;
+      const grade = (
+        sentences: { text: string; citations: { chunk_id: string }[]; uncited?: boolean }[],
+        chunkTexts: Map<string, string>,
+      ) => {
+        const g = { pass: 0, fail: 0, ambiguous: [] as string[] };
+        for (const s of sentences) {
+          if (!s.citations.length) {
+            if (s.uncited) g.fail += 1;
+            continue;
           }
+          const joined = s.citations.map((c) => chunkTexts.get(c.chunk_id) ?? '').join(' ');
+          const score = overlap(s.text, joined);
+          const numbers = s.text.match(/\d+(?:[.,]\d+)?/g) ?? [];
+          const numbersOk = numbers.every((n) => joined.includes(n));
+          if (score >= 0.5 && numbersOk) g.pass += 1;
+          else if (score >= 0.3) g.ambiguous.push(s.text);
+          else g.fail += 1;
         }
+        return g;
+      };
+
+      let citation: ItemResult['citation'] = null;
+      let citationRaw: ItemResult['citation_raw'] = null;
+      const verifiedInsufficient = r.verified?.insufficient ?? insufficient;
+      if (g.answerable && !insufficient) {
+        const chunkTexts = await chunkTextsFor(
+          user,
+          Object.values(citations).map((c) => c.chunk_id),
+        );
+        citationRaw = grade(
+          parseAnswer(r.text, citations).flatMap((p) => p.sentences),
+          chunkTexts,
+        );
+        citation = grade(
+          (r.verified?.paragraphs ?? []).flatMap((p) =>
+            p.sentences.filter((x) => x.citations.length),
+          ),
+          chunkTexts,
+        );
       }
 
       const answerLower = r.text.toLowerCase();
@@ -157,23 +224,40 @@ async function main(): Promise<void> {
         lang: g.lang,
         answerable: g.answerable,
         ok: true,
-        insufficient,
+        insufficient: verifiedInsufficient,
         retrieved_pages: retrievedPages,
         recall_hit: g.answerable ? g.expected_pages.some((p) => retrievedPages.includes(p)) : null,
         citation,
+        citation_raw: citationRaw,
+        omitted: r.verified?.omitted ?? 0,
         must_not_say_hit: g.must_not_say.filter((s) => answerLower.includes(s.toLowerCase())),
         gist_hit: g.answerable && !insufficient ? overlap(g.expected_gist, r.text) >= 0.5 : null,
         ttft_ms: r.ttft_ms,
         latency_ms: Date.now() - started,
         answer: r.text,
       });
-      process.stdout.write(`${g.id} ${insufficient ? 'INSUFFICIENT' : 'ok'} pages=${retrievedPages.join(',')}\n`);
+      process.stdout.write(
+        `${g.id} ${insufficient ? 'INSUFFICIENT' : 'ok'} pages=${retrievedPages.join(',')}\n`,
+      );
     } catch (e) {
       const msg = e instanceof AskError ? `${e.code}: ${e.message}` : String(e);
       results.push({
-        id: g.id, lang: g.lang, answerable: g.answerable, ok: false, error: msg, insufficient: false,
-        retrieved_pages: [], recall_hit: null, citation: null, must_not_say_hit: [], gist_hit: null,
-        ttft_ms: null, latency_ms: null, answer: '',
+        id: g.id,
+        lang: g.lang,
+        answerable: g.answerable,
+        ok: false,
+        error: msg,
+        insufficient: false,
+        retrieved_pages: [],
+        recall_hit: null,
+        citation: null,
+        citation_raw: null,
+        omitted: 0,
+        must_not_say_hit: [],
+        gist_hit: null,
+        ttft_ms: null,
+        latency_ms: null,
+        answer: '',
       });
       process.stdout.write(`${g.id} LỖI ${msg}\n`);
       if (e instanceof AskError && e.code === 'quota_exceeded') break;
@@ -189,12 +273,26 @@ async function main(): Promise<void> {
   const fail = cit.reduce((n, r) => n + r.citation!.fail, 0);
   const ambiguous = cit.reduce((n, r) => n + r.citation!.ambiguous.length, 0);
   const citationPrecision = ratio(pass, pass + fail);
+  const rawPass = cit.reduce((n, r) => n + (r.citation_raw?.pass ?? 0), 0);
+  const rawFail = cit.reduce((n, r) => n + (r.citation_raw?.fail ?? 0), 0);
+  const citationPrecisionRaw = ratio(rawPass, rawPass + rawFail);
+  // Câu đã qua verify mà so khớp vẫn thất bại = mệnh đề không căn cứ lọt ra UI.
+  const unsupportedLeak = ratio(fail, pass + fail);
+  const omittedTotal = answerable.reduce((n, r) => n + r.omitted, 0);
   const refusal = ratio(traps.filter((r) => r.insufficient).length, traps.length);
   const falseRefusal = ratio(answerable.filter((r) => r.insufficient).length, answerable.length);
   const leaks = traps.filter((r) => r.must_not_say_hit.length).length;
-  const ttfts = results.map((r) => r.ttft_ms).filter((v): v is number => v !== null).sort((a, b) => a - b);
-  const p95 = ttfts.length ? ttfts[Math.min(ttfts.length - 1, Math.floor(ttfts.length * 0.95))]! : null;
-  const gist = ratio(answerable.filter((r) => r.gist_hit).length, answerable.filter((r) => r.gist_hit !== null).length);
+  const ttfts = results
+    .map((r) => r.ttft_ms)
+    .filter((v): v is number => v !== null)
+    .sort((a, b) => a - b);
+  const p95 = ttfts.length
+    ? ttfts[Math.min(ttfts.length - 1, Math.floor(ttfts.length * 0.95))]!
+    : null;
+  const gist = ratio(
+    answerable.filter((r) => r.gist_hit).length,
+    answerable.filter((r) => r.gist_hit !== null).length,
+  );
 
   const summary = {
     label: process.env.EVAL_LABEL ?? '',
@@ -203,7 +301,10 @@ async function main(): Promise<void> {
     errors: results.filter((r) => !r.ok).length,
     recall_at_6: recall,
     citation_precision: citationPrecision,
+    citation_precision_raw: citationPrecisionRaw,
     citation_ambiguous: ambiguous,
+    unsupported_leak: unsupportedLeak,
+    omitted_total: omittedTotal,
     refusal_accuracy: refusal,
     false_refusal: falseRefusal,
     must_not_say_leaks: leaks,
@@ -213,18 +314,31 @@ async function main(): Promise<void> {
   };
 
   mkdirSync(OUT_DIR, { recursive: true });
-  const file = join(OUT_DIR, `${summary.at.replace(/[:.]/g, '-')}${summary.label ? `_${summary.label}` : ''}.json`);
+  const file = join(
+    OUT_DIR,
+    `${summary.at.replace(/[:.]/g, '-')}${summary.label ? `_${summary.label}` : ''}.json`,
+  );
   writeFileSync(file, JSON.stringify({ summary, results }, null, 2));
 
   const row = (k: string, v: string | number | null, t?: number, lowerIsBetter = false) => {
-    const okMark = t === undefined || v === null ? '' : (lowerIsBetter ? (v as number) <= t : (v as number) >= t) ? '  ✓' : '  ✗';
-    console.log(`${k.padEnd(22)} ${String(v ?? '-').padStart(8)}${t !== undefined ? `  (ngưỡng ${lowerIsBetter ? '≤' : '≥'} ${t})` : ''}${okMark}`);
+    const okMark =
+      t === undefined || v === null
+        ? ''
+        : (lowerIsBetter ? (v as number) <= t : (v as number) >= t)
+          ? '  ✓'
+          : '  ✗';
+    console.log(
+      `${k.padEnd(22)} ${String(v ?? '-').padStart(8)}${t !== undefined ? `  (ngưỡng ${lowerIsBetter ? '≤' : '≥'} ${t})` : ''}${okMark}`,
+    );
   };
   console.log('\n=== Kết quả eval ===');
   row('câu chạy / lỗi', `${summary.n} / ${summary.errors}`);
   row('recall@6', fmt(recall), THRESHOLDS.recall_at_6);
   row('citation_precision', fmt(citationPrecision), THRESHOLDS.citation_precision);
+  row('  (thô, trước verify)', fmt(citationPrecisionRaw));
   row('  câu mập mờ (chấm tay)', ambiguous);
+  row('unsupported_leak', fmt(unsupportedLeak), THRESHOLDS.unsupported_leak, true);
+  row('  mệnh đề đã ẩn', omittedTotal);
   row('refusal_accuracy', fmt(refusal), THRESHOLDS.refusal_accuracy);
   row('false_refusal', fmt(falseRefusal));
   row('must_not_say leaks', leaks);
@@ -240,7 +354,10 @@ async function main(): Promise<void> {
     const bad: string[] = [];
     if (summary.errors) bad.push(`lỗi hệ thống: ${summary.errors}`);
     if (recall === null || recall < THRESHOLDS.recall_at_6) bad.push('recall@6');
-    if (citationPrecision === null || citationPrecision < THRESHOLDS.citation_precision) bad.push('citation_precision');
+    if (citationPrecision === null || citationPrecision < THRESHOLDS.citation_precision)
+      bad.push('citation_precision');
+    if (unsupportedLeak !== null && unsupportedLeak > THRESHOLDS.unsupported_leak)
+      bad.push('unsupported_leak');
     if (refusal === null || refusal < THRESHOLDS.refusal_accuracy) bad.push('refusal_accuracy');
     if (p95 === null || p95 > THRESHOLDS.ttft_p95_ms) bad.push('ttft_p95');
     if (bad.length) {
@@ -258,10 +375,25 @@ function fmt(v: number | null): string | null {
   return v === null ? null : v.toFixed(3);
 }
 
-async function ensureDocument(ingest: string, url: string, anon: string, jwt: string, userId: string, doc: string): Promise<string> {
+async function ensureDocument(
+  ingest: string,
+  url: string,
+  anon: string,
+  jwt: string,
+  userId: string,
+  doc: string,
+): Promise<string> {
   const title = basename(doc, '.pdf');
-  const client = createClient(url, anon, { auth: { persistSession: false }, global: { headers: { Authorization: `Bearer ${jwt}` } } });
-  const { data: existing } = await client.from('documents').select('id,status').eq('owner', userId).eq('title', title).maybeSingle();
+  const client = createClient(url, anon, {
+    auth: { persistSession: false },
+    global: { headers: { Authorization: `Bearer ${jwt}` } },
+  });
+  const { data: existing } = await client
+    .from('documents')
+    .select('id,status')
+    .eq('owner', userId)
+    .eq('title', title)
+    .maybeSingle();
   if (existing?.status === 'ready') return existing.id;
   const path = join(ROOT, 'docs', 'samples', doc);
   if (!existsSync(path)) throw new Error(`Thiếu ${path} — chạy bash docs/samples/fetch.sh`);
@@ -273,7 +405,11 @@ async function ensureDocument(ingest: string, url: string, anon: string, jwt: st
   const body = (await res.json()) as { document_id?: string; code?: string; message?: string };
   if (!res.ok || !body.document_id) throw new Error(`ingest ${doc}: ${body.code} ${body.message}`);
   for (let i = 0; i < 120; i += 1) {
-    const { data } = await client.from('documents').select('status,error').eq('id', body.document_id).single();
+    const { data } = await client
+      .from('documents')
+      .select('status,error')
+      .eq('id', body.document_id)
+      .single();
     if (data?.status === 'ready') return body.document_id;
     if (data?.status === 'failed') throw new Error(`ingest ${doc} failed: ${data.error}`);
     await new Promise((r) => setTimeout(r, 2000));
@@ -290,14 +426,30 @@ async function chunkTextsFor(client: SupabaseClient, ids: string[]): Promise<Map
 }
 
 function diff(): void {
-  const files = readdirSync(OUT_DIR).filter((f) => f.endsWith('.json')).sort();
+  const files = readdirSync(OUT_DIR)
+    .filter((f) => f.endsWith('.json'))
+    .sort();
   if (files.length < 2) {
     console.log('Cần ít nhất hai lần chạy trong eval/out.');
     return;
   }
-  const [prev, cur] = files.slice(-2).map((f) => JSON.parse(readFileSync(join(OUT_DIR, f), 'utf8')) as { summary: Record<string, unknown>; results: ItemResult[] });
+  const [prev, cur] = files
+    .slice(-2)
+    .map(
+      (f) =>
+        JSON.parse(readFileSync(join(OUT_DIR, f), 'utf8')) as {
+          summary: Record<string, unknown>;
+          results: ItemResult[];
+        },
+    );
   console.log(`So sánh ${files.at(-2)} → ${files.at(-1)}`);
-  for (const k of ['recall_at_6', 'citation_precision', 'refusal_accuracy', 'ttft_p95_ms']) {
+  for (const k of [
+    'recall_at_6',
+    'citation_precision',
+    'unsupported_leak',
+    'refusal_accuracy',
+    'ttft_p95_ms',
+  ]) {
     console.log(`${k.padEnd(20)} ${String(prev!.summary[k])} → ${String(cur!.summary[k])}`);
   }
   const before = new Map(prev!.results.map((r) => [r.id, r]));
@@ -308,7 +460,10 @@ function diff(): void {
       (b.recall_hit && !r.recall_hit) ||
       (!b.answerable && b.insufficient && !r.insufficient) ||
       (b.answerable && !b.insufficient && r.insufficient);
-    if (worse) console.log(`  tệ đi: ${r.id} (${r.insufficient ? 'INSUFFICIENT' : `pages ${r.retrieved_pages.join(',')}`})`);
+    if (worse)
+      console.log(
+        `  tệ đi: ${r.id} (${r.insufficient ? 'INSUFFICIENT' : `pages ${r.retrieved_pages.join(',')}`})`,
+      );
   }
 }
 

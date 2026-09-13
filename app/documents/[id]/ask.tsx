@@ -3,29 +3,40 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { AnswerView } from '@/features/ask/AnswerView';
-import { fixtureAnswer, fixtureInsufficient } from '@/features/ask/fixtures';
-import type { VerifiedAnswer } from '@/features/ask/types';
-import { useChunks } from '@/features/reader/api';
+import { ExplainSheet } from '@/features/ask/ExplainSheet';
+import type { VerifiedParagraph } from '@/features/ask/types';
+import { useAsk } from '@/features/ask/useAsk';
+import { AskError } from '@/lib/askClient';
 import { supabase } from '@/lib/supabase';
 import { useThemeColors } from '@/theme/useThemeColors';
 
 /**
- * Màn Hỏi (G2.6). Ở G2 chỉ hiển thị fixture theo kiểu `VerifiedAnswer` — stream thật nối vào
- * ở G3 sau verify() (CLAUDE.md quy tắc 2: dùng fixture, không tắt kiểm chứng). Hạn mức đọc
- * thật từ `my_question_quota()` (G2.8).
+ * Màn Hỏi (G2.6 + G3.4/G3.5). Chỉ vẽ `VerifiedAnswer` từ event `verified` — trong lúc chờ,
+ * hiện "Đang tìm trong tài liệu…" chứ không hiện văn bản thô (CLAUDE.md quy tắc 2).
  */
 export default function AskScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
   const router = useRouter();
   const c = useThemeColors();
-  const chunks = useChunks(id);
+  const ask = useAsk(id);
+  const [question, setQuestion] = useState('');
+  const [asked, setAsked] = useState('');
+  const [explain, setExplain] = useState<VerifiedParagraph | null>(null);
   const quota = useQuery({
     queryKey: ['quota'],
     queryFn: async () => {
@@ -34,32 +45,33 @@ export default function AskScreen() {
       return data;
     },
   });
-  const [question, setQuestion] = useState('');
-  const [answer, setAnswer] = useState<VerifiedAnswer | null>(null);
 
-  const ask = () => {
+  const submit = () => {
     const q = question.trim();
-    if (!q) return;
-    // Fixture: câu có chữ "không" ra từ chối để kiểm đường INSUFFICIENT; còn lại ra câu trả lời mẫu
-    // trỏ vào hai chunk đầu của tài liệu thật để chạm trích dẫn nhảy đúng chỗ.
-    const [a, b] = chunks.data ?? [];
-    setAnswer(
-      /không|not/i.test(q)
-        ? fixtureInsufficient
-        : fixtureAnswer(
-            a?.page_no ?? 1,
-            b?.page_no ?? a?.page_no ?? 1,
-            a?.id ?? '',
-            b?.id ?? a?.id ?? '',
-          ),
-    );
+    if (!q || ask.isPending) return;
+    setAsked(q);
+    ask.mutate(q);
   };
 
-  const openCitation = (page: number, chunkId: string | null) =>
+  const openCitation = (page: number, chunkId: string | null) => {
+    setExplain(null);
     router.push({
       pathname: '/documents/[id]',
       params: { id, page: String(page), ...(chunkId ? { chunk: chunkId } : {}) },
     });
+  };
+
+  const error = ask.error;
+  const errorText =
+    error instanceof AskError
+      ? error.code === 'quota_exceeded'
+        ? t('ask.quotaExceeded', { quota: String(error.extra['quota'] ?? '') })
+        : error.code === 'consent_required'
+          ? t('ingestError.consent_required')
+          : t('ask.askFailed')
+      : error
+        ? t('ask.askFailed')
+        : null;
 
   return (
     <SafeAreaView className="flex-1 bg-paper" edges={['top', 'bottom']}>
@@ -81,11 +93,22 @@ export default function AskScreen() {
         className="flex-1"
       >
         <ScrollView contentContainerClassName="px-screen py-lg" keyboardShouldPersistTaps="handled">
-          {__DEV__ ? (
-            <Text className="type-label text-inferred mb-md">{t('ask.fixtureNotice')}</Text>
-          ) : null}
-          {answer ? (
-            <AnswerView answer={answer} onOpenCitation={openCitation} />
+          {asked ? <Text className="type-uiMedium text-ink-muted mb-block">{asked}</Text> : null}
+          {ask.isPending ? (
+            <View className="flex-row items-center gap-sm">
+              <ActivityIndicator className="text-ink" />
+              <Text className="type-ui text-ink-muted">{t('ask.thinking')}</Text>
+            </View>
+          ) : errorText ? (
+            <Text className="type-ui text-unsupported" accessibilityLiveRegion="polite">
+              {errorText}
+            </Text>
+          ) : ask.data ? (
+            <AnswerView
+              answer={ask.data.answer}
+              onOpenCitation={openCitation}
+              onExplain={setExplain}
+            />
           ) : (
             <Text className="type-ui text-ink-muted">{t('ask.placeholder')}</Text>
           )}
@@ -105,11 +128,24 @@ export default function AskScreen() {
             value={question}
             onChangeText={setQuestion}
             returnKeyType="send"
-            onSubmitEditing={ask}
+            onSubmitEditing={submit}
+            editable={!ask.isPending}
           />
-          <Button label={t('ask.send')} onPress={ask} disabled={!question.trim()} />
+          <Button
+            label={t('ask.send')}
+            busyLabel={t('ask.thinking')}
+            busy={ask.isPending}
+            onPress={submit}
+            disabled={!question.trim()}
+          />
         </View>
       </KeyboardAvoidingView>
+
+      <ExplainSheet
+        paragraph={explain}
+        onClose={() => setExplain(null)}
+        onOpenCitation={openCitation}
+      />
     </SafeAreaView>
   );
 }

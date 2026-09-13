@@ -17,8 +17,8 @@ export default {
     inferredFrom: 'suy ra từ trang {{page}}',
     title: 'Hỏi tài liệu này',
     send: 'Hỏi',
-    fixtureNotice:
-      'Bản xem trước với dữ liệu mẫu — câu trả lời thật nối vào ở cổng G3 sau lớp kiểm chứng.',
+    askFailed: 'Chưa trả lời được lúc này. Thử lại sau.',
+    quotaExceeded: 'Hết lượt hỏi của tháng này. Gói hiện tại: {{quota}} câu/tháng.',
     quota: 'Còn {{left}}/{{quota}} câu hỏi tháng này',
   },
   verdict: {
@@ -26,6 +26,8 @@ export default {
     inferred: 'Suy luận',
     unsupported: 'Không có trong tài liệu',
     explain: 'Vì sao có nhãn này',
+    explainHint:
+      'Mỗi câu được đối chiếu với đoạn nó trích dẫn. Câu không có trong tài liệu đã được lược bỏ.',
   },
   study: {
     title: 'Ôn tập',

@@ -17,8 +17,8 @@ export default {
     inferredFrom: 'inferred from page {{page}}',
     title: 'Ask this document',
     send: 'Ask',
-    fixtureNotice:
-      'Preview with sample data — real answers arrive in G3 behind the verification layer.',
+    askFailed: 'Couldn’t answer right now. Try again later.',
+    quotaExceeded: 'You’ve used this month’s questions. Current plan: {{quota}}/month.',
     quota: '{{left}}/{{quota}} questions left this month',
   },
   verdict: {
@@ -26,6 +26,8 @@ export default {
     inferred: 'Inferred',
     unsupported: 'Not in your document',
     explain: 'Why this label',
+    explainHint:
+      'Each sentence was checked against the passage it cites. Sentences not in your document were left out.',
   },
   study: {
     title: 'Study',

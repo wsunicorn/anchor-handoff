@@ -25,6 +25,8 @@
     "supabase/functions/_shared/citations.test.ts",
     "supabase/functions/_shared/prompts.ts",
     "src/lib/askClient.ts",
-    "src/lib/i18n/*.ts"
+    "src/lib/i18n/*.ts",
+    "supabase/functions/_shared/verify.ts",
+    "supabase/functions/_shared/verify.test.ts"
   ]
 }
