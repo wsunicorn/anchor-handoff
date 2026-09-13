@@ -98,13 +98,16 @@ export function parseAnswer(text: string, sources: Record<string, CitationSource
     .filter(Boolean);
 
   return paragraphs.map((p) => ({
-    sentences: splitSentences(p).map((raw) => {
-      const citations = codesIn(raw)
-        .map((code) => sources[code])
-        .filter((c): c is CitationSource => Boolean(c));
-      const cleaned = stripCodes(raw);
-      return { text: cleaned, citations, uncited: citations.length === 0 && isClaim(cleaned) };
-    }),
+    sentences: splitSentences(p)
+      .map((raw) => {
+        const citations = codesIn(raw)
+          .map((code) => sources[code])
+          .filter((c): c is CitationSource => Boolean(c));
+        const cleaned = stripCodes(raw);
+        return { text: cleaned, citations, uncited: citations.length === 0 && isClaim(cleaned) };
+      })
+      // Model đôi khi trả lời một phần rồi chốt "INSUFFICIENT [c1]" — không phải nội dung để hiển thị.
+      .filter((s) => !isInsufficient(s.text)),
   }));
 }
 

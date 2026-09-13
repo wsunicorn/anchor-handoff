@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:  # chạy tay cổng rag-gate (tốn hạn mức Gemini, không chạy trên mọi PR)
+    inputs:
+      only:
+        description: 'EVAL_ONLY — chỉ chạy vài id (vd vi-001,en-003) để thử đường ống'
+        required: false
+        default: ''
 
 jobs:
   check:
@@ -63,11 +69,14 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
           TESSDATA_PREFIX: /usr/share/tesseract-ocr/5/tessdata  # CI: gói apt (fast hơn) đủ để test luồng OCR
 
-  # Cổng chất lượng RAG. Bật bằng repo variable RAG_GATE_ENABLED=true khi G3.7 có `pnpm eval:gate`.
-  # Ngưỡng ở docs/SPEC.md §7. Fail ở đây là chặn phát hành, không phải cảnh báo.
+  # Cổng chất lượng RAG (G3.7). Dựng cả stack ngay trên runner: Supabase local + `functions serve`
+  # + services/ingest + 6 PDF thật (cache theo fetch.sh) rồi `pnpm eval:gate`. Ngưỡng ở docs/SPEC.md §7.
+  # Fail ở đây là chặn phát hành, không phải cảnh báo. Chạy khi push main với repo variable
+  # RAG_GATE_ENABLED=true, hoặc chạy tay (workflow_dispatch). Secret cần: LLM_PROVIDER_API_KEY.
   rag-gate:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && vars.RAG_GATE_ENABLED == 'true'
+    if: github.event_name == 'workflow_dispatch' || (github.ref == 'refs/heads/main' && vars.RAG_GATE_ENABLED == 'true')
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -76,8 +85,37 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm eval:gate
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: services/ingest/requirements.txt
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-vie tesseract-ocr-eng
+      - run: pip install -r services/ingest/requirements.txt
+      - uses: actions/cache@v4
+        id: samples
+        with:
+          path: docs/samples/*.pdf
+          key: samples-${{ hashFiles('docs/samples/fetch.sh') }}
+      - if: steps.samples.outputs.cache-hit != 'true'
+        run: PYTHON=python bash docs/samples/fetch.sh
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: supabase start -x logflare,vector,imgproxy,supavisor,realtime,studio,edge-runtime
+      - run: mkdir -p eval/out && bash scripts/rag-gate-ci.sh
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           LLM_PROVIDER_API_KEY: ${{ secrets.LLM_PROVIDER_API_KEY }}
+          LLM_MODEL_ANSWER: ${{ vars.LLM_MODEL_ANSWER }}
+          LLM_MODEL_VERIFY: ${{ vars.LLM_MODEL_VERIFY }}
+          LLM_MODEL_RERANK: ${{ vars.LLM_MODEL_RERANK }}
+          EVAL_LABEL: ci-${{ github.sha }}
+          EVAL_ONLY: ${{ inputs.only }}
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rag-eval-${{ github.run_id }}
+          path: eval/out/
+          if-no-files-found: ignore
+      - if: always()
+        run: supabase stop --no-backup

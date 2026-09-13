@@ -32,8 +32,16 @@ function apiKey(): string {
   return key;
 }
 
+/** Thống kê theo từng request (không dùng biến module: isolate per_worker phục vụ nhiều request). */
+export type CallStats = { rate_limit_wait_ms: number };
+
 /** 429 (RPM) thì đợi theo `retryDelay` của Google (tối đa 2 lần, trần 20s); hạn mức ngày thì thua ngay. */
-async function post(path: string, body: unknown, stream = false): Promise<Response> {
+async function post(
+  path: string,
+  body: unknown,
+  stream = false,
+  stats?: CallStats,
+): Promise<Response> {
   const url = `${BASE}/${path}${stream ? '?alt=sse' : ''}`;
   for (let attempt = 0; ; attempt += 1) {
     const res = await fetch(url, {
@@ -46,6 +54,7 @@ async function post(path: string, body: unknown, stream = false): Promise<Respon
     if (res.status === 429 && attempt < 2 && !/PerDay/.test(text)) {
       const m = /"retryDelay":\s*"(\d+)s"/.exec(text);
       const wait = Math.min(20, m ? Number(m[1]) : 5);
+      if (stats) stats.rate_limit_wait_ms += wait * 1000;
       await new Promise((r) => setTimeout(r, wait * 1000));
       continue;
     }
@@ -53,12 +62,18 @@ async function post(path: string, body: unknown, stream = false): Promise<Respon
   }
 }
 
-export async function embedQuery(model: string, text: string, dim: number): Promise<number[]> {
-  const res = await post(`models/${model}:embedContent`, {
-    content: { parts: [{ text }] },
-    taskType: 'RETRIEVAL_QUERY',
-    outputDimensionality: dim,
-  });
+export async function embedQuery(
+  model: string,
+  text: string,
+  dim: number,
+  stats?: CallStats,
+): Promise<number[]> {
+  const res = await post(
+    `models/${model}:embedContent`,
+    { content: { parts: [{ text }] }, taskType: 'RETRIEVAL_QUERY', outputDimensionality: dim },
+    false,
+    stats,
+  );
   const json = (await res.json()) as { embedding?: { values?: number[] } };
   const values = json.embedding?.values ?? [];
   if (values.length !== dim) throw new Error(`embedding_dim_mismatch:${values.length}`);
@@ -95,21 +110,27 @@ export async function generate(
     maxTokens?: number;
     temperature?: number;
     thinkingLevel?: 'minimal' | 'low' | 'medium' | 'high';
+    stats?: CallStats;
   } = {},
 ): Promise<GenerateResult> {
-  const res = await post(`models/${model}:generateContent`, {
-    systemInstruction: { parts: [{ text: system }] },
-    contents: [{ role: 'user', parts: [{ text: user }] }],
-    generationConfig: {
-      temperature: opts.temperature ?? 0,
-      maxOutputTokens: opts.maxTokens ?? 1024,
-      // Model 3.x là model "thinking": phần suy nghĩ ăn vào maxOutputTokens và lộ ra part `thought`.
-      // Các việc ở đây (trả lời có ràng buộc, rerank, verify) không cần suy nghĩ dài → 'minimal'
-      // (thinkingBudget:0 bị API 3.x từ chối — đo 2026-09-13).
-      thinkingConfig: { thinkingLevel: opts.thinkingLevel ?? 'minimal' },
-      ...(opts.json ? { responseMimeType: 'application/json' } : {}),
+  const res = await post(
+    `models/${model}:generateContent`,
+    {
+      systemInstruction: { parts: [{ text: system }] },
+      contents: [{ role: 'user', parts: [{ text: user }] }],
+      generationConfig: {
+        temperature: opts.temperature ?? 0,
+        maxOutputTokens: opts.maxTokens ?? 1024,
+        // Model 3.x là model "thinking": phần suy nghĩ ăn vào maxOutputTokens và lộ ra part `thought`.
+        // Các việc ở đây (trả lời có ràng buộc, rerank, verify) không cần suy nghĩ dài → 'minimal'
+        // (thinkingBudget:0 bị API 3.x từ chối — đo 2026-09-13).
+        thinkingConfig: { thinkingLevel: opts.thinkingLevel ?? 'minimal' },
+        ...(opts.json ? { responseMimeType: 'application/json' } : {}),
+      },
     },
-  });
+    false,
+    opts.stats,
+  );
   const json = (await res.json()) as {
     candidates?: { content?: { parts?: Part[] } }[];
     usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
@@ -131,6 +152,7 @@ export async function generateStream(
     maxTokens?: number;
     temperature?: number;
     thinkingLevel?: 'minimal' | 'low' | 'medium' | 'high';
+    stats?: CallStats;
   } = {},
 ): Promise<GenerateResult> {
   const res = await post(
@@ -145,6 +167,7 @@ export async function generateStream(
       },
     },
     true,
+    opts.stats,
   );
   const reader = res.body!.getReader();
   const decoder = new TextDecoder();

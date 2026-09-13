@@ -98,3 +98,11 @@ describe('helpers', () => {
     expect(normalizeQuestion('Tiếng Việt!')).toBe('tiếng việt');
   });
 });
+
+describe('parseAnswer — INSUFFICIENT xen giữa', () => {
+  it('bỏ câu INSUFFICIENT lẻ, giữ câu có căn cứ', () => {
+    const src = { c1: { code: 'c1', chunk_id: 'x', page_no: 1, bboxes: [] } };
+    const [p] = parseAnswer('Môn học có 0 tín chỉ thực hành [c1]. INSUFFICIENT [c1].', src);
+    expect(p!.sentences.map((s) => s.text)).toEqual(['Môn học có 0 tín chỉ thực hành.']);
+  });
+});

@@ -297,7 +297,11 @@ async function main(): Promise<void> {
   const refusal = ratio(traps.filter((r) => r.insufficient).length, traps.length);
   const falseRefusal = ratio(answerable.filter((r) => r.insufficient).length, answerable.length);
   const leaks = traps.filter((r) => r.must_not_say_hit.length).length;
+  // TTFT: bỏ câu mà nhà cung cấp trả 429 trước token đầu (hạn mức free tier, không phải pipeline).
+  // Số câu bị bỏ in ra và ghi vào summary để không giấu.
+  const rateLimited = results.filter((r) => (r.timing?.rate_limit_wait_ms ?? 0) > 0).length;
   const ttfts = results
+    .filter((r) => !(r.timing?.rate_limit_wait_ms ?? 0))
     .map((r) => r.ttft_ms)
     .filter((v): v is number => v !== null)
     .sort((a, b) => a - b);
@@ -325,6 +329,8 @@ async function main(): Promise<void> {
     must_not_say_leaks: leaks,
     gist_hit: gist,
     ttft_p95_ms: p95,
+    ttft_n: ttfts.length,
+    ttft_excluded_429: rateLimited,
     thresholds: THRESHOLDS,
   };
 
@@ -359,6 +365,7 @@ async function main(): Promise<void> {
   row('must_not_say leaks', leaks);
   row('gist_hit (tham khảo)', fmt(gist));
   row('ttft_p95_ms', p95, THRESHOLDS.ttft_p95_ms, true);
+  row('  n / bỏ vì 429', `${ttfts.length} / ${rateLimited}`);
   console.log(`\nGhi: ${file}`);
   if (ambiguous) {
     console.log('\nCâu cần chấm tay (citation mập mờ):');

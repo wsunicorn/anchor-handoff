@@ -151,7 +151,9 @@ Deno.serve(async (req) => {
 
         const t0 = Date.now();
         const timing: Record<string, number> = {};
-        const embedding = await embedQuery(EMBEDDING_MODEL, question, EMBEDDING_DIM);
+        // Thời gian đợi 429 của nhà cung cấp trước token đầu — eval tách riêng để TTFT không lẫn hạn mức.
+        const stats = { rate_limit_wait_ms: 0 };
+        const embedding = await embedQuery(EMBEDDING_MODEL, question, EMBEDDING_DIM, stats);
         timing.embed_ms = Date.now() - t0;
         const { data: rows, error: searchErr } = await admin.rpc('search_chunks', {
           p_document_id: document_id,
@@ -173,7 +175,7 @@ Deno.serve(async (req) => {
               candidates.map((c) => c.text.slice(0, 700)),
               MAX_CONTEXT_CHUNKS,
             ),
-            { json: true, maxTokens: 64 },
+            { json: true, maxTokens: 64, stats },
           );
           rerankUsage = r.usage;
           timing.rerank_ms = Date.now() - t0 - timing.embed_ms! - timing.search_ms!;
@@ -205,11 +207,14 @@ Deno.serve(async (req) => {
               askSystemPrompt(lang),
               askUserPrompt(question, promptChunks),
               (delta) => {
-                if (!firstToken) firstToken = Date.now() - startedAt;
+                if (!firstToken) {
+                  firstToken = Date.now() - startedAt;
+                  timing.rate_limit_wait_ms = stats.rate_limit_wait_ms;
+                }
                 sse.send('delta', { text: delta });
               },
               // Trần cứng cao hơn yêu cầu trong prompt (700) để câu cuối không bị cắt giữa chừng.
-              { maxTokens: MAX_ANSWER_TOKENS + 324 },
+              { maxTokens: MAX_ANSWER_TOKENS + 324, stats },
             )
           : { text: 'INSUFFICIENT', usage: { tokens_in: 0, tokens_out: 0 } };
         if (!top.length) sse.send('delta', { text: result.text });
