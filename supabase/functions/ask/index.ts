@@ -13,11 +13,7 @@
  */
 import { z } from 'npm:zod@3';
 
-import {
-  type CitationSource,
-  isInsufficient,
-  normalizeQuestion,
-} from '../_shared/citations.ts';
+import { type CitationSource, isInsufficient, normalizeQuestion } from '../_shared/citations.ts';
 import { costUsd, embedQuery, generate, generateStream, type Usage } from '../_shared/gemini.ts';
 import {
   adminClient,
@@ -61,7 +57,9 @@ const RERANK_MODEL = Deno.env.get('LLM_MODEL_RERANK') ?? 'gemini-3.5-flash-lite'
 const VERIFY_MODEL = Deno.env.get('LLM_MODEL_VERIFY') ?? 'gemini-3.5-flash-lite';
 const EMBEDDING_MODEL = Deno.env.get('EMBEDDING_MODEL') ?? 'gemini-embedding-2';
 const EMBEDDING_DIM = 768;
-const RERANK_ENABLED = (Deno.env.get('RERANK') ?? 'on') !== 'off';
+// G2.3 đo 2026-09-13 trên bộ vàng: rerank listwise không tăng recall (1.000 off vs 0.975 on) mà thêm ~1.1s
+// và một lời gọi. Mặc định tắt; bật lại bằng RERANK=on khi tài liệu lớn hơn nhiều.
+const RERANK_ENABLED = (Deno.env.get('RERANK') ?? 'off') === 'on';
 
 type ChunkRow = { chunk_id: string; page_no: number; text: string; bboxes: unknown; score: number };
 
@@ -71,7 +69,8 @@ Deno.serve(async (req) => {
   try {
     const userId = await requireUser(req, admin);
     const parsed = Body.safeParse(await req.json().catch(() => ({})));
-    if (!parsed.success) throw new HttpError(400, 'bad_request', 'Thiếu document_id, question hoặc lang.');
+    if (!parsed.success)
+      throw new HttpError(400, 'bad_request', 'Thiếu document_id, question hoặc lang.');
     const { document_id, question, lang, nocache } = parsed.data;
 
     const { data: profile } = await admin
@@ -90,7 +89,8 @@ Deno.serve(async (req) => {
       .eq('owner', userId)
       .maybeSingle();
     if (!doc) throw new HttpError(404, 'not_found', 'Không tìm thấy tài liệu.');
-    if (doc.status !== 'ready') throw new HttpError(409, 'document_not_ready', 'Tài liệu chưa xử lý xong.');
+    if (doc.status !== 'ready')
+      throw new HttpError(409, 'document_not_ready', 'Tài liệu chưa xử lý xong.');
 
     const cacheKey = await sha256Hex(`${document_id}|${normalizeQuestion(question)}|${lang}`);
     const { data: cached } = nocache
@@ -104,7 +104,9 @@ Deno.serve(async (req) => {
     (async () => {
       try {
         const conversationId = await ensureConversation(admin, document_id, userId);
-        await admin.from('messages').insert({ conversation_id: conversationId, role: 'user', content: question });
+        await admin
+          .from('messages')
+          .insert({ conversation_id: conversationId, role: 'user', content: question });
 
         if (cached) {
           const a = cached.answer as {
@@ -124,7 +126,12 @@ Deno.serve(async (req) => {
             citations: a.citations,
             cost_usd: 0,
           });
-          sse.send('done', { insufficient: a.insufficient, nearest_page: a.nearest_page, cached: true, usage: null });
+          sse.send('done', {
+            insufficient: a.insufficient,
+            nearest_page: a.nearest_page,
+            cached: true,
+            usage: null,
+          });
           return;
         }
 
@@ -132,11 +139,20 @@ Deno.serve(async (req) => {
         const { data: quota } = await admin.rpc('question_quota', { p_owner: userId }).single();
         const q = quota as { used: number; quota: number; resets_at: string } | null;
         if (q && q.used >= q.quota) {
-          sse.send('error', { code: 'quota_exceeded', message: 'Hết lượt hỏi của tháng này.', used: q.used, quota: q.quota, resets_at: q.resets_at });
+          sse.send('error', {
+            code: 'quota_exceeded',
+            message: 'Hết lượt hỏi của tháng này.',
+            used: q.used,
+            quota: q.quota,
+            resets_at: q.resets_at,
+          });
           return;
         }
 
+        const t0 = Date.now();
+        const timing: Record<string, number> = {};
         const embedding = await embedQuery(EMBEDDING_MODEL, question, EMBEDDING_DIM);
+        timing.embed_ms = Date.now() - t0;
         const { data: rows, error: searchErr } = await admin.rpc('search_chunks', {
           p_document_id: document_id,
           p_query: question,
@@ -144,6 +160,7 @@ Deno.serve(async (req) => {
           p_limit: RERANK_CANDIDATES,
         });
         if (searchErr) throw searchErr;
+        timing.search_ms = Date.now() - t0 - timing.embed_ms!;
         let candidates = (rows ?? []) as ChunkRow[];
 
         let rerankUsage: Usage | null = null;
@@ -151,10 +168,15 @@ Deno.serve(async (req) => {
           const r = await generate(
             RERANK_MODEL,
             'Bạn là bộ xếp hạng đoạn văn. Chỉ trả JSON.',
-            rerankPrompt(question, candidates.map((c) => c.text.slice(0, 700)), MAX_CONTEXT_CHUNKS),
+            rerankPrompt(
+              question,
+              candidates.map((c) => c.text.slice(0, 700)),
+              MAX_CONTEXT_CHUNKS,
+            ),
             { json: true, maxTokens: 64 },
           );
           rerankUsage = r.usage;
+          timing.rerank_ms = Date.now() - t0 - timing.embed_ms! - timing.search_ms!;
           const order = parseOrder(r.text, candidates.length);
           if (order.length >= Math.min(MAX_CONTEXT_CHUNKS, candidates.length)) {
             candidates = order.map((i) => candidates[i]!);
@@ -165,18 +187,27 @@ Deno.serve(async (req) => {
         const citations: Record<string, CitationSource> = {};
         const promptChunks: PromptChunk[] = top.map((c, i) => {
           const code = `c${i + 1}`;
-          citations[code] = { code, chunk_id: c.chunk_id, page_no: c.page_no, bboxes: (c.bboxes as CitationSource['bboxes']) ?? [] };
+          citations[code] = {
+            code,
+            chunk_id: c.chunk_id,
+            page_no: c.page_no,
+            bboxes: (c.bboxes as CitationSource['bboxes']) ?? [],
+          };
           return { code, page: c.page_no, text: c.text };
         });
         sse.send('meta', { conversation_id: conversationId, citations });
 
         const startedAt = Date.now();
+        let firstToken = 0;
         const result = top.length
           ? await generateStream(
               ANSWER_MODEL,
               askSystemPrompt(lang),
               askUserPrompt(question, promptChunks),
-              (delta) => sse.send('delta', { text: delta }),
+              (delta) => {
+                if (!firstToken) firstToken = Date.now() - startedAt;
+                sse.send('delta', { text: delta });
+              },
               // Trần cứng cao hơn yêu cầu trong prompt (700) để câu cuối không bị cắt giữa chừng.
               { maxTokens: MAX_ANSWER_TOKENS + 324 },
             )
@@ -189,7 +220,12 @@ Deno.serve(async (req) => {
         // ---- Lớp kiểm chứng (G3): một lời gọi cho mọi mệnh đề, tối đa 12 (ADR-0001) ----
         const chunkTexts: Record<string, string> = {};
         for (const c of top) chunkTexts[c.chunk_id] = c.text;
-        let verified: VerifiedAnswer = { paragraphs: [], insufficient: true, nearestPage, omitted: 0 };
+        let verified: VerifiedAnswer = {
+          paragraphs: [],
+          insufficient: true,
+          nearestPage,
+          omitted: 0,
+        };
         let claimsOut: ReturnType<typeof verifyFromRaw>['claims'] = [];
         let verifyUsage: Usage | null = null;
         let scores: ReturnType<typeof parseScores> = [];
@@ -237,17 +273,54 @@ Deno.serve(async (req) => {
           );
         }
         const costRows = [
-          { owner: userId, feature: 'answer', model: ANSWER_MODEL, ...result.usage, cost_usd: costUsd(ANSWER_MODEL, result.usage) },
-          { owner: userId, feature: 'embed', model: EMBEDDING_MODEL, tokens_in: Math.ceil(question.length / 4), tokens_out: 0, cost_usd: costUsd(EMBEDDING_MODEL, { tokens_in: Math.ceil(question.length / 4), tokens_out: 0 }) },
+          {
+            owner: userId,
+            feature: 'answer',
+            model: ANSWER_MODEL,
+            ...result.usage,
+            cost_usd: costUsd(ANSWER_MODEL, result.usage),
+          },
+          {
+            owner: userId,
+            feature: 'embed',
+            model: EMBEDDING_MODEL,
+            tokens_in: Math.ceil(question.length / 4),
+            tokens_out: 0,
+            cost_usd: costUsd(EMBEDDING_MODEL, {
+              tokens_in: Math.ceil(question.length / 4),
+              tokens_out: 0,
+            }),
+          },
         ];
-        if (rerankUsage) costRows.push({ owner: userId, feature: 'rerank', model: RERANK_MODEL, ...rerankUsage, cost_usd: costUsd(RERANK_MODEL, rerankUsage) });
-        if (verifyUsage) costRows.push({ owner: userId, feature: 'verify', model: VERIFY_MODEL, ...verifyUsage, cost_usd: costUsd(VERIFY_MODEL, verifyUsage) });
+        if (rerankUsage)
+          costRows.push({
+            owner: userId,
+            feature: 'rerank',
+            model: RERANK_MODEL,
+            ...rerankUsage,
+            cost_usd: costUsd(RERANK_MODEL, rerankUsage),
+          });
+        if (verifyUsage)
+          costRows.push({
+            owner: userId,
+            feature: 'verify',
+            model: VERIFY_MODEL,
+            ...verifyUsage,
+            cost_usd: costUsd(VERIFY_MODEL, verifyUsage),
+          });
         await admin.from('usage_costs').insert(costRows);
         await admin.from('answer_cache').upsert({
           key: cacheKey,
           document_id,
           lang,
-          answer: { text: result.text, citations, insufficient, nearest_page: nearestPage, model: ANSWER_MODEL, verified },
+          answer: {
+            text: result.text,
+            citations,
+            insufficient,
+            nearest_page: nearestPage,
+            model: ANSWER_MODEL,
+            verified,
+          },
         });
 
         sse.send('done', {
@@ -256,10 +329,14 @@ Deno.serve(async (req) => {
           cached: false,
           usage: result.usage,
           latency_ms: Date.now() - startedAt,
+          timing: { ...timing, model_ttft_ms: firstToken, total_ms: Date.now() - t0 },
         });
       } catch (e) {
         console.error(e);
-        const err = e instanceof HttpError ? e : new HttpError(500, 'internal', 'Không trả lời được lúc này.');
+        const err =
+          e instanceof HttpError
+            ? e
+            : new HttpError(500, 'internal', 'Không trả lời được lúc này.');
         sse.send('error', { code: err.code, message: err.message, ...err.extra });
       } finally {
         sse.close();
@@ -272,7 +349,11 @@ Deno.serve(async (req) => {
   }
 });
 
-async function ensureConversation(admin: ReturnType<typeof adminClient>, documentId: string, owner: string): Promise<string> {
+async function ensureConversation(
+  admin: ReturnType<typeof adminClient>,
+  documentId: string,
+  owner: string,
+): Promise<string> {
   const { data: existing } = await admin
     .from('conversations')
     .select('id')

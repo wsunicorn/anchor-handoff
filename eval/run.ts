@@ -45,6 +45,7 @@ type ItemResult = {
   gist_hit: boolean | null;
   ttft_ms: number | null;
   latency_ms: number | null;
+  timing?: Record<string, number>;
   answer: string;
 };
 
@@ -159,9 +160,19 @@ async function main(): Promise<void> {
     docIds.set(doc, await ensureDocument(ingest, url, anon, jwt, userId, doc));
   }
 
-  // 3. Hỏi từng câu.
+  // 3. Hỏi từng câu. EVAL_RESUME=<file json>: giữ kết quả đã chạy được, chỉ hỏi lại câu lỗi.
   const results: ItemResult[] = [];
+  const resumeFrom = process.env.EVAL_RESUME
+    ? (JSON.parse(readFileSync(process.env.EVAL_RESUME, 'utf8')) as { results: ItemResult[] })
+        .results
+    : [];
+  const reusable = new Map(resumeFrom.filter((r) => r.ok).map((r) => [r.id, r]));
   for (const g of items) {
+    const prev = reusable.get(g.id);
+    if (prev) {
+      results.push(prev);
+      continue;
+    }
     const documentId = docIds.get(g.doc)!;
     const started = Date.now();
     try {
@@ -189,8 +200,11 @@ async function main(): Promise<void> {
           }
           const joined = s.citations.map((c) => chunkTexts.get(c.chunk_id) ?? '').join(' ');
           const score = overlap(s.text, joined);
-          const numbers = s.text.match(/\d+(?:[.,]\d+)?/g) ?? [];
-          const numbersOk = numbers.every((n) => joined.includes(n));
+          // So số theo dạng chỉ-chữ-số: "37,000" ↔ "37000", "4.000" ↔ "4000".
+          const digits = (t: string) =>
+            (t.match(/\d[\d.,]*/g) ?? []).map((n) => n.replace(/[.,]/g, ''));
+          const joinedDigits = new Set(digits(joined));
+          const numbersOk = digits(s.text).every((n) => joinedDigits.has(n) || joined.includes(n));
           if (score >= 0.5 && numbersOk) g.pass += 1;
           else if (score >= 0.3) g.ambiguous.push(s.text);
           else g.fail += 1;
@@ -234,6 +248,7 @@ async function main(): Promise<void> {
         gist_hit: g.answerable && !insufficient ? overlap(g.expected_gist, r.text) >= 0.5 : null,
         ttft_ms: r.ttft_ms,
         latency_ms: Date.now() - started,
+        timing: r.done?.timing,
         answer: r.text,
       });
       process.stdout.write(

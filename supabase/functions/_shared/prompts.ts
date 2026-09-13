@@ -18,6 +18,7 @@ export function askSystemPrompt(lang: 'vi' | 'en'): string {
     `Nếu các đoạn không đủ để trả lời, viết đúng một câu: ${INSUFFICIENT} — không đoán, không bổ sung kiến thức bên ngoài, không nói "theo hiểu biết chung".`,
     `Trả lời bằng ${LANG_NAME[lang]} kể cả khi tài liệu viết bằng ngôn ngữ khác. Giữ nguyên thuật ngữ chuyên ngành ở dạng gốc, giải nghĩa một lần ở lần xuất hiện đầu.`,
     `Tối đa ${MAX_ANSWER_TOKENS} token. Không mở đầu bằng lời chào hay tóm tắt câu hỏi.`,
+    'Câu nào thiếu mã đoạn sẽ bị hệ thống xoá khỏi câu trả lời trước khi hiển thị — vì vậy đặt mã ở cuối mỗi câu, kể cả câu cuối cùng. Ví dụ: `Học phần có 2 tín chỉ [c1]. Thi cuối kỳ chiếm 50% [c3].`',
   ].join('\n');
 }
 

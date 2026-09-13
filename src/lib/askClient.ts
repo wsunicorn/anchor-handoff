@@ -13,6 +13,7 @@ export type AskDone = {
   cached: boolean;
   usage: { tokens_in: number; tokens_out: number } | null;
   latency_ms?: number;
+  timing?: Record<string, number>;
 };
 export type AskErrorBody = { code: string; message: string; [k: string]: unknown };
 

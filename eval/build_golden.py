@@ -69,7 +69,7 @@ VI_TRAP: list[tuple[str, str, list[str]]] = [
     (CTU, "Lệ phí thi lại học phần SP095 là bao nhiêu?", ["đồng", "VND", "lệ phí"]),
     (HCM, "Điểm số tối thiểu để qua môn Vật lý 1 là bao nhiêu?", ["5.0", "4.0", "điểm tối thiểu"]),
     (HCM, "Bài kiểm tra quá trình lần 2 của Vật lý 1 diễn ra ở tuần 8, đúng không?", ["tuần 8"]),
-    (HCM, "Vật lý 1 có bao nhiêu tín chỉ thí nghiệm?", ["1 tín chỉ thí nghiệm", "2 tín chỉ thí nghiệm"]),
+    (HCM, "Vật lý 1 có phần thí nghiệm ở phòng lab nào và do ai phụ trách?", ["phòng", "lab", "phụ trách thí nghiệm"]),
     (HCM, "Công thức tính động năng được đề cương Vật lý 1 nêu ra là gì?", ["mv²/2", "1/2 mv", "K ="]),
     (VJOL, "Bài báo khảo sát bao nhiêu sinh viên và kết quả điểm trung bình tăng bao nhiêu phần trăm?", ["%", "điểm trung bình", "khảo sát"]),
     (VJOL, "Nhiệt nóng chảy của nước đá đo được trong bài thí nghiệm là bao nhiêu J/kg?", ["J/kg", "334", "3,34"]),
