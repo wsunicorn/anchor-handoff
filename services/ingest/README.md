@@ -3,7 +3,7 @@
 FastAPI + PyMuPDF: nhận PDF → trang (PNG 1600px) + chunk có toạ độ + embedding → Supabase.
 
 ```
-POST /documents   multipart: file=<pdf>, title=<tuỳ chọn>   Authorization: Bearer <JWT người dùng>
+POST /documents?title=<tuỳ chọn>   body: PDF thô (Content-Type: application/pdf)   Authorization: Bearer <JWT người dùng>
 GET  /health
 ```
 

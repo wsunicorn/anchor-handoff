@@ -4,6 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import { AppState } from 'react-native';
 
+import type { Database } from '@/lib/database.types';
+
 /**
  * Client duy nhất của app. Chỉ dùng khoá anon (EXPO_PUBLIC_*); mọi lời gọi LLM đi qua
  * Edge Function, không bao giờ có khoá nhà cung cấp ở đây (CLAUDE.md quy tắc 1).
@@ -20,7 +22,7 @@ if (!url || !anonKey) {
   );
 }
 
-export const supabase = createClient(url, anonKey, {
+export const supabase = createClient<Database>(url, anonKey, {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,

@@ -7,4 +7,3 @@ google-genai
 tiktoken
 pytest
 pytest-asyncio
-python-multipart

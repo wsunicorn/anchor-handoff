@@ -36,7 +36,7 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: latest
-      - run: supabase start -x logflare,vector,imgproxy,supavisor,realtime,studio,edge-runtime,storage-api
+      - run: supabase start -x logflare,vector,imgproxy,supavisor,realtime,studio,edge-runtime
       - run: pnpm test:rls
       - if: always()
         run: supabase stop --no-backup

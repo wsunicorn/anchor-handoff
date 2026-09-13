@@ -20,12 +20,12 @@ echo "user $EMAIL ($UID_)"
 
 # Gói pro để nạp được nhiều hơn 1 tài liệu trong smoke test (hạn mức free = 1).
 curl -s -X PATCH "$SUPA/rest/v1/profiles?id=eq.$UID_" -H "apikey: $SERVICE" -H "Authorization: Bearer $SERVICE" \
-  -H "Content-Type: application/json" -d '{"tier":"pro"}' >/dev/null
+  -H "Content-Type: application/json" -d '{"tier":"pro","ai_consent_at":"now()"}' >/dev/null
 
 # 2. nạp từng fixture
 for f in "$@"; do
   echo "--- $f"
-  curl -s -X POST "$INGEST/documents" -H "Authorization: Bearer $JWT" -F "file=@$f;type=application/pdf" -F "title=$(basename "$f" .pdf)"
+  curl -s -X POST "$INGEST/documents?title=$(basename "$f" .pdf)" -H "Authorization: Bearer $JWT" -H "Content-Type: application/pdf" --data-binary "@$f"
   echo
 done
 

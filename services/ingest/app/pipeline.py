@@ -50,16 +50,19 @@ def detect_lang(text: str) -> str:
     return "vi" if len(_VI_MARKS.findall(text)) / letters > 0.03 else "en"
 
 
-async def _tier_of(user_id: str) -> str:
-    rows = await supabase.select("profiles", select="tier", id=f"eq.{user_id}")
-    return rows[0]["tier"] if rows else "free"
+async def _profile(user_id: str) -> dict[str, Any]:
+    rows = await supabase.select("profiles", select="tier,ai_consent_at", id=f"eq.{user_id}")
+    return rows[0] if rows else {"tier": "free", "ai_consent_at": None}
 
 
 async def accept_upload(user_id: str, title: str, pdf: bytes) -> Accepted:
     """Kiểm hạn mức ở server (G1.10), tạo dòng documents, lưu file gốc. Không xử lý nặng ở đây."""
     sha = hashlib.sha256(pdf).hexdigest()
-    tier = await _tier_of(user_id)
-    max_docs, max_pages = limits_for(tier)
+    profile = await _profile(user_id)
+    # SPEC §9 / CLAUDE.md quy tắc 3: nội dung tài liệu đi tới Gemini để embedding → phải có đồng ý trước.
+    if not profile.get("ai_consent_at"):
+        raise LimitError("consent_required", 0)
+    max_docs, max_pages = limits_for(profile["tier"])
 
     # Cùng người, cùng file: trả về tài liệu đã có (unique(owner, sha256)).
     existing = await supabase.select(

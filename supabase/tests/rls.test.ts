@@ -159,6 +159,27 @@ describe.skipIf(!configured)('RLS: user B không đọc được tài liệu c�
     expect(still.data?.['title']).toBe('Giáo trình của A');
   });
 
+  it('Storage: B không đọc được ảnh trang của A, A đọc được', async () => {
+    // Service role ghi file như services/ingest làm; đường dẫn bắt đầu bằng uuid chủ sở hữu.
+    const path = `${idA}/${docA}/pages/1.png`;
+    const png = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const up = await admin.storage
+      .from('documents')
+      .upload(path, png, { contentType: 'image/png' });
+    expect(up.error).toBeNull();
+
+    const forB = await b.storage.from('documents').download(path);
+    expect(forB.data).toBeNull();
+    expect(forB.error).not.toBeNull();
+
+    const signedForB = await b.storage.from('documents').createSignedUrl(path, 60);
+    expect(signedForB.data).toBeNull();
+
+    const forA = await a.storage.from('documents').download(path);
+    expect(forA.error).toBeNull();
+    expect(forA.data?.size).toBe(8);
+  });
+
   it('chưa đăng nhập (anon): không thấy gì', async () => {
     const { data } = await anon.from('chunks').select('id');
     expect(data).toEqual([]);

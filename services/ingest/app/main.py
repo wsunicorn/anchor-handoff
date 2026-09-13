@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -59,22 +59,26 @@ async def health() -> dict:
 
 @app.post("/documents", response_model=IngestResponse)
 async def upload_document(
+    request: Request,
     background: BackgroundTasks,
-    file: UploadFile = File(...),
-    title: str = Form(""),
+    title: str = Query(""),
     user: dict = Depends(current_user),
 ):
-    if file.content_type not in ("application/pdf", "application/octet-stream"):
+    """Body là PDF thô (`Content-Type: application/pdf`), tiêu đề qua query — không multipart
+    vì FormData của React Native và fetch của Expo không ghép được phần file."""
+    if request.headers.get("content-type", "").split(";")[0] not in ("application/pdf", "application/octet-stream"):
         return _error(415, "unsupported_type", "Hiện chỉ nhận PDF.")
-    data = await file.read()
+    data = await request.body()
     if len(data) > MAX_UPLOAD_BYTES:
         return _error(413, "file_too_large", "File lớn hơn 100 MB.")
     if not data.startswith(b"%PDF"):
         return _error(415, "unsupported_type", "File này không phải PDF.")
 
     try:
-        accepted = await accept_upload(user["id"], title or (file.filename or "").removesuffix(".pdf"), data)
+        accepted = await accept_upload(user["id"], title.strip() or "Tài liệu", data)
     except LimitError as e:
+        if e.code == "consent_required":
+            return _error(403, e.code, "Cần đồng ý sử dụng tính năng AI trước khi nạp tài liệu.")
         return _error(403, e.code, "Vượt hạn mức của gói hiện tại.", limit=e.limit)
     except ValueError as e:
         code = str(e)
