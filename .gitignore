@@ -35,3 +35,4 @@ expo-env.d.ts
 docs/samples/*.pdf
 supabase/functions/.env
 .functions.log
+eval/out/

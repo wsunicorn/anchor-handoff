@@ -7,7 +7,7 @@
     "start": "expo start --dev-client",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.node.json",
     "check-i18n": "tsx scripts/check-i18n.ts",
     "test": "vitest run",
     "test:rls": "bash scripts/test-rls.sh",
@@ -15,7 +15,10 @@
     "db:reset": "supabase db reset",
     "lint": "eslint .",
     "format": "prettier --write \"app/**/*.{ts,tsx}\" \"src/**/*.{ts,tsx}\" \"scripts/**/*.ts\" \"supabase/tests/**/*.ts\" \"*.{js,mjs,mts,ts,json}\"",
-    "db:types": "supabase gen types typescript --local > src/lib/database.types.ts"
+    "db:types": "supabase gen types typescript --local > src/lib/database.types.ts",
+    "eval:rag": "bash scripts/eval.sh rag",
+    "eval:gate": "bash scripts/eval.sh gate",
+    "eval:diff": "bash scripts/eval.sh diff"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -56,6 +59,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@types/node": "^22.20.2",
     "@types/react": "~19.2.2",
     "dotenv": "^17.4.2",
     "eslint": "^9.39.5",

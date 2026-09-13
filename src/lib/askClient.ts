@@ -31,7 +31,12 @@ export class AskError extends Error {
   }
 }
 
-export type AskInput = { document_id: string; question: string; lang: 'vi' | 'en' };
+export type AskInput = {
+  document_id: string;
+  question: string;
+  lang: 'vi' | 'en';
+  nocache?: boolean;
+};
 
 export async function* askStream(
   functionsUrl: string,

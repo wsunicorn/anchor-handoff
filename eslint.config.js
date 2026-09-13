@@ -20,6 +20,11 @@ module.exports = defineConfig([
     rules: { '@typescript-eslint/no-explicit-any': 'error' },
   },
   {
+    // Script Node (eval, scripts): đọc process.env động là bình thường, không qua Expo inline.
+    files: ['eval/**/*.ts', 'scripts/**/*.ts', 'supabase/tests/**/*.ts'],
+    rules: { 'expo/no-dynamic-env-var': 'off' },
+  },
+  {
     // File cấu hình của Metro/Babel/Tailwind là CommonJS.
     files: ['*.config.js'],
     languageOptions: {

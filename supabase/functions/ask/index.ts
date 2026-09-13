@@ -42,6 +42,8 @@ const Body = z.object({
   document_id: z.string().uuid(),
   question: z.string().trim().min(2).max(500),
   lang: z.enum(['vi', 'en']),
+  // Bỏ qua cache — chỉ eval dùng (vẫn tính hạn mức). Người dùng thường không cần.
+  nocache: z.boolean().optional(),
 });
 
 const ANSWER_MODEL = Deno.env.get('LLM_MODEL_ANSWER') ?? 'gemini-2.5-flash';
@@ -59,7 +61,7 @@ Deno.serve(async (req) => {
     const userId = await requireUser(req, admin);
     const parsed = Body.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) throw new HttpError(400, 'bad_request', 'Thiếu document_id, question hoặc lang.');
-    const { document_id, question, lang } = parsed.data;
+    const { document_id, question, lang, nocache } = parsed.data;
 
     const { data: profile } = await admin
       .from('profiles')
@@ -80,7 +82,9 @@ Deno.serve(async (req) => {
     if (doc.status !== 'ready') throw new HttpError(409, 'document_not_ready', 'Tài liệu chưa xử lý xong.');
 
     const cacheKey = await sha256Hex(`${document_id}|${normalizeQuestion(question)}|${lang}`);
-    const { data: cached } = await admin.from('answer_cache').select('answer').eq('key', cacheKey).maybeSingle();
+    const { data: cached } = nocache
+      ? { data: null }
+      : await admin.from('answer_cache').select('answer').eq('key', cacheKey).maybeSingle();
 
     const sse = sseStream();
     const response = new Response(sse.stream, { headers: sseHeaders });

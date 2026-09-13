@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@shared/*": ["./supabase/functions/_shared/*"]
+    }
+  },
+  "include": [
+    "eval/**/*.ts",
+    "scripts/**/*.ts",
+    "supabase/tests/**/*.ts",
+    "supabase/functions/_shared/citations.ts",
+    "supabase/functions/_shared/citations.test.ts",
+    "supabase/functions/_shared/prompts.ts",
+    "src/lib/askClient.ts",
+    "src/lib/i18n/*.ts"
+  ]
+}
