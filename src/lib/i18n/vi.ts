@@ -13,6 +13,13 @@ export default {
     insufficient: 'Tài liệu của bạn không nói điều này.',
     nearestSection: 'Phần gần nhất: trang {{page}}',
     page: 'tr. {{page}}',
+    omitted: '{{count}} ý trong câu trả lời không có trong tài liệu nên đã được lược bỏ.',
+    inferredFrom: 'suy ra từ trang {{page}}',
+    title: 'Hỏi tài liệu này',
+    send: 'Hỏi',
+    fixtureNotice:
+      'Bản xem trước với dữ liệu mẫu — câu trả lời thật nối vào ở cổng G3 sau lớp kiểm chứng.',
+    quota: 'Còn {{left}}/{{quota}} câu hỏi tháng này',
   },
   verdict: {
     grounded: 'Có căn cứ',

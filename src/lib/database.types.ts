@@ -28,6 +28,38 @@ export type Database = {
   };
   public: {
     Tables: {
+      answer_cache: {
+        Row: {
+          answer: Json;
+          created_at: string;
+          document_id: string;
+          key: string;
+          lang: string;
+        };
+        Insert: {
+          answer: Json;
+          created_at?: string;
+          document_id: string;
+          key: string;
+          lang: string;
+        };
+        Update: {
+          answer?: Json;
+          created_at?: string;
+          document_id?: string;
+          key?: string;
+          lang?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'answer_cache_document_id_fkey';
+            columns: ['document_id'];
+            isOneToOne: false;
+            referencedRelation: 'documents';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       cards: {
         Row: {
           due_at: string;
@@ -463,6 +495,24 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      my_question_quota: {
+        Args: never;
+        Returns: {
+          quota: number;
+          resets_at: string;
+          tier: string;
+          used: number;
+        }[];
+      };
+      question_quota: {
+        Args: { p_owner: string };
+        Returns: {
+          quota: number;
+          resets_at: string;
+          tier: string;
+          used: number;
+        }[];
+      };
       search_chunks: {
         Args: {
           p_document_id: string;

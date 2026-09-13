@@ -38,6 +38,7 @@ function RootLayout() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="documents/[id]/index" />
             <Stack.Screen name="documents/[id]/chunks" />
+            <Stack.Screen name="documents/[id]/ask" />
             <Stack.Screen name="consent" options={{ presentation: 'modal' }} />
           </Stack.Protected>
           <Stack.Protected guard={session === null}>

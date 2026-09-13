@@ -1,6 +1,6 @@
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, List } from 'lucide-react-native';
+import { ChevronLeft, List, MessageSquareText } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, Text, useWindowDimensions, View } from 'react-native';
@@ -57,6 +57,14 @@ export default function ReaderScreen() {
         <Text className="type-uiMedium text-ink flex-1 text-center">
           {total ? t('reader.page', { page: current, total }) : ''}
         </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('ask.title')}
+          onPress={() => router.push({ pathname: '/documents/[id]/ask', params: { id } })}
+          className="min-h-[44px] min-w-[44px] items-center justify-center"
+        >
+          <MessageSquareText color={c.ink} size={22} />
+        </Pressable>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('reader.chunks')}

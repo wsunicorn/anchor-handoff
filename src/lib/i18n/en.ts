@@ -13,6 +13,13 @@ export default {
     insufficient: 'Your document does not say this.',
     nearestSection: 'Closest section: page {{page}}',
     page: 'p. {{page}}',
+    omitted: '{{count}} point(s) in the answer are not in your document and were left out.',
+    inferredFrom: 'inferred from page {{page}}',
+    title: 'Ask this document',
+    send: 'Ask',
+    fixtureNotice:
+      'Preview with sample data — real answers arrive in G3 behind the verification layer.',
+    quota: '{{left}}/{{quota}} questions left this month',
   },
   verdict: {
     grounded: 'Grounded',
