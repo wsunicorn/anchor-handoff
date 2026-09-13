@@ -61,7 +61,7 @@ jobs:
         env:
           SUPABASE_URL: http://127.0.0.1:54321
           SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
-          TESSDATA_PREFIX: /usr/share/tesseract-ocr/5/tessdata
+          TESSDATA_PREFIX: /usr/share/tesseract-ocr/5/tessdata  # CI: gói apt (fast hơn) đủ để test luồng OCR
 
   # Cổng chất lượng RAG. Bật bằng repo variable RAG_GATE_ENABLED=true khi G3.7 có `pnpm eval:gate`.
   # Ngưỡng ở docs/SPEC.md §7. Fail ở đây là chặn phát hành, không phải cảnh báo.

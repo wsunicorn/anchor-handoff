@@ -32,3 +32,4 @@ supabase/.temp/
 
 expo-env.d.ts
 # @end expo-cliservices/ingest/ingest.log
+docs/samples/*.pdf

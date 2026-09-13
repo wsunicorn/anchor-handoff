@@ -81,6 +81,8 @@ export default function ReaderScreen() {
           ref={listRef}
           data={pages.data}
           keyExtractor={(p) => p.id}
+          // FlashList memo hoá item: highlight tới sau khi trang đã vẽ thì phải báo để vẽ lại.
+          extraData={highlight}
           renderItem={({ item }) => (
             <PageView
               page={item}
