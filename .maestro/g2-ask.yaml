@@ -1,0 +1,82 @@
+# Luồng chính G2/G3: đăng nhập bằng mã OTP (đọc từ Mailpit local) → mở tài liệu → hỏi → thấy
+# câu trả lời đã qua lớp kiểm chứng (thanh neo grounded/inferred), không lộ chữ thô.
+# Chạy: bash scripts/maestro.sh  (cần stack local + Metro + dev client trên emulator; xem docs/DEVICE-LOOP.md)
+appId: com.anchor.app
+env:
+  EMAIL: eval@anchor.local
+  DOC: en_attention
+  QUESTION: "What is the dimension d_model used in the base model?"
+  EXPECT: "512"
+---
+# Xoá trạng thái để luôn đi qua đăng nhập. Dev client mở màn chọn server → chạm vào Metro (cổng 8081).
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "http://.*:8081"
+    timeout: 20000
+- tapOn: "http://.*:8081"
+# Lần đầu sau clearState, dev client hiện hướng dẫn developer menu.
+- extendedWaitUntil:
+    visible: "Continue"
+    timeout: 30000
+    optional: true
+- tapOn:
+    text: "Continue"
+    optional: true
+- tapOn:
+    text: "Close"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "signin-email"
+    timeout: 60000
+    optional: true
+- runFlow:
+    when:
+      visible:
+        id: "signin-email"
+    commands:
+      - tapOn:
+          id: "signin-email"
+      - inputText: "${EMAIL}"
+      - tapOn:
+          id: "signin-send"
+      - extendedWaitUntil:
+          visible:
+            id: "signin-code"
+          timeout: 15000
+      - runScript:
+          file: otp.js
+          env:
+            EMAIL: ${EMAIL}
+      - tapOn:
+          id: "signin-code"
+      - inputText: "${output.otp}"
+      - tapOn:
+          id: "signin-verify"
+- extendedWaitUntil:
+    visible: "Thư viện|Library"
+    timeout: 20000
+- tapOn:
+    text: "${DOC}[.] .*"
+- extendedWaitUntil:
+    visible:
+      id: "reader-ask"
+    timeout: 20000
+- tapOn:
+    id: "reader-ask"
+- tapOn:
+    id: "ask-input"
+- inputText: "${QUESTION}"
+- hideKeyboard
+- tapOn:
+    id: "ask-send"
+# Câu trả lời chỉ hiện sau verify(): phải có thanh neo có mức, và nội dung đúng.
+- extendedWaitUntil:
+    visible: ".*${EXPECT}.*"
+    timeout: 45000
+- assertVisible:
+    id: "answer-grounded|answer-inferred"
+- assertNotVisible: ".*INSUFFICIENT.*"
+- assertNotVisible: '.*[[]c[0-9]+[]].*'
+- takeScreenshot: G2-maestro-ask  # Maestro 2.x ghi vào ~/.maestro/tests/<run>/; scripts/maestro.sh chép sang docs/shots

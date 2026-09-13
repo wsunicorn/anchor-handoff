@@ -60,6 +60,7 @@ export default function ReaderScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('ask.title')}
+          testID="reader-ask"
           onPress={() => router.push({ pathname: '/documents/[id]/ask', params: { id } })}
           className="min-h-[44px] min-w-[44px] items-center justify-center"
         >

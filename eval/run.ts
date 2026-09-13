@@ -3,6 +3,7 @@
  *
  *   pnpm eval:rag            chạy 100 câu, in bảng, ghi eval/out/<thời điểm>.json
  *   pnpm eval:gate           như trên, exit 1 nếu vi phạm ngưỡng (CI)
+ *   pnpm eval:seed           chỉ tạo user eval + nạp 6 tài liệu (cho test Maestro), không hỏi
  *   pnpm eval:diff           so hai lần chạy gần nhất, in câu nào tệ đi
  *   EVAL_ONLY=vi-001,en-003  chỉ chạy vài câu;  EVAL_LABEL=rerank-off  gắn nhãn cho lần chạy
  *
@@ -158,6 +159,10 @@ async function main(): Promise<void> {
   const docIds = new Map<string, string>();
   for (const doc of new Set(items.map((g) => g.doc))) {
     docIds.set(doc, await ensureDocument(ingest, url, anon, jwt, userId, doc));
+  }
+  if (mode === 'seed') {
+    console.log(`seed xong: ${email}, ${docIds.size} tài liệu ready`);
+    return;
   }
 
   // 3. Hỏi từng câu. EVAL_RESUME=<file json>: giữ kết quả đã chạy được, chỉ hỏi lại câu lỗi.

@@ -71,6 +71,7 @@ export default function SignIn() {
             <TextField
               label={t('auth.emailLabel')}
               placeholder={t('auth.emailPlaceholder')}
+              testID="signin-email"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -86,6 +87,7 @@ export default function SignIn() {
             <View className="mt-lg">
               <Button
                 label={t('auth.sendLink')}
+                testID="signin-send"
                 busyLabel={t('auth.sending')}
                 busy={busy}
                 onPress={send}
@@ -98,6 +100,7 @@ export default function SignIn() {
             <View className="mt-lg">
               <TextField
                 label={t('auth.codeLabel')}
+                testID="signin-code"
                 value={code}
                 onChangeText={(v) => setCode(v.replace(/\D/g, '').slice(0, 6))}
                 keyboardType="number-pad"
@@ -114,6 +117,7 @@ export default function SignIn() {
             <View className="mt-lg gap-sm">
               <Button
                 label={t('auth.verify')}
+                testID="signin-verify"
                 busyLabel={t('auth.verifying')}
                 busy={busy}
                 onPress={verify}

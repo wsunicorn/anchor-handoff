@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Chạy eval trên Supabase local: nạp khoá từ `supabase status`, cần uvicorn (8000) và
 # `supabase functions serve --env-file supabase/functions/.env` đang chạy.
-#   bash scripts/eval.sh rag|gate|diff
+#   bash scripts/eval.sh rag|gate|diff|seed
 set -euo pipefail
 cd "$(dirname "$0")/.."
 if [ -z "${SUPABASE_URL:-}" ]; then

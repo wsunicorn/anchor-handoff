@@ -8,6 +8,8 @@ type Props = {
   busy?: boolean;
   busyLabel?: string;
   disabled?: boolean;
+  /** Cho test Maestro (`.maestro/`), thành resource-id trên Android. */
+  testID?: string;
 };
 
 /**
@@ -21,11 +23,13 @@ export function Button({
   busy = false,
   busyLabel,
   disabled = false,
+  testID,
 }: Props) {
   const inactive = busy || disabled;
   const primary = variant === 'primary';
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: inactive, busy }}

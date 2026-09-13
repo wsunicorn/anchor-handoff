@@ -73,3 +73,20 @@ có nhãn đọc được, không có nhãn rỗng, không có nhãn kiểu "but
 Không có máy ảo iOS trên Windows. Cho tới khi mượn được iPhone hoặc dựng được đường EAS
 Build → TestFlight, **mọi kết luận về giao diện iOS đều là suy đoán**. Ghi rõ điều đó khi
 tick task, đừng viết "đã kiểm trên cả hai nền tảng".
+
+## 7. Test Maestro (từ G2)
+
+Một luồng chính mỗi cổng, đặt ở `.maestro/`. Chạy: `bash scripts/maestro.sh` (mặc định `.maestro/g2-ask.yaml`).
+Cần: stack local (`pnpm db:start`, uvicorn 8000, `functions serve`), Metro **không** `CI=1`, dev client
+trên emulator, và `pnpm eval:seed` một lần (tạo `eval@anchor.local` + nạp 6 PDF `docs/samples`).
+Luồng tự đăng nhập bằng mã OTP đọc từ Mailpit (`.maestro/otp.js`), nên không cần email thật.
+
+Bẫy đã gặp:
+- **"UiAutomationService … already registered"** khi Maestro khởi động driver: mobile-mcp để lại
+  `app_process … com.mobilenext.mobilecli.DeviceServer` trên emulator. `adb shell ps -A | grep app_process`
+  rồi `adb shell kill <pid>`. Hai công cụ không dùng chung một lúc.
+- Sau `clearState`, dev client hiện màn hướng dẫn (Continue) rồi developer menu (Close) — flow đã xử lý
+  bằng bước `optional`.
+- Maestro so khớp `text` theo **toàn bộ chuỗi** (regex): tìm chuỗi con phải viết `.*512.*`.
+- Ảnh `takeScreenshot` của Maestro 2.x nằm trong `~/.maestro/tests/<run>/`; `scripts/maestro.sh` chép sang `docs/shots/`.
+- Emulator đang để locale tiếng Anh → chuỗi chờ viết dạng `"Thư viện|Library"`.

@@ -18,6 +18,7 @@
     "db:types": "supabase gen types typescript --local > src/lib/database.types.ts",
     "eval:rag": "bash scripts/eval.sh rag",
     "eval:gate": "bash scripts/eval.sh gate",
+    "eval:seed": "bash scripts/eval.sh seed",
     "eval:diff": "bash scripts/eval.sh diff"
   },
   "dependencies": {

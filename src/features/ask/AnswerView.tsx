@@ -75,6 +75,7 @@ function AnchoredParagraph({
     <View className="flex-row">
       {/* Thanh neo: vùng chạm 44pt rộng nhưng vẽ 2pt. */}
       <Pressable
+        testID={`answer-${paragraph.verdict}`}
         accessibilityRole="button"
         accessibilityLabel={`${label}. ${t('verdict.explain')}`}
         onPress={() => onExplain?.(paragraph)}

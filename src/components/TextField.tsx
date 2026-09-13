@@ -16,6 +16,7 @@ type Props = Pick<
   | 'editable'
   | 'onSubmitEditing'
   | 'returnKeyType'
+  | 'testID'
 > & {
   label: string;
   /** Thông báo lỗi đặt ngay dưới ô — nói chuyện gì và làm gì tiếp (DESIGN §7). */

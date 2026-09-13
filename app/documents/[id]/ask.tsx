@@ -125,6 +125,7 @@ export default function AskScreen() {
           ) : null}
           <TextField
             label={t('ask.placeholder')}
+            testID="ask-input"
             value={question}
             onChangeText={setQuestion}
             returnKeyType="send"
@@ -133,6 +134,7 @@ export default function AskScreen() {
           />
           <Button
             label={t('ask.send')}
+            testID="ask-send"
             busyLabel={t('ask.thinking')}
             busy={ask.isPending}
             onPress={submit}
