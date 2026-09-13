@@ -56,10 +56,10 @@ const Body = z.object({
   nocache: z.boolean().optional(),
 });
 
-const ANSWER_MODEL = Deno.env.get('LLM_MODEL_ANSWER') ?? 'gemini-2.5-flash';
-const RERANK_MODEL = Deno.env.get('LLM_MODEL_RERANK') ?? 'gemini-2.5-flash-lite';
-const VERIFY_MODEL = Deno.env.get('LLM_MODEL_VERIFY') ?? 'gemini-2.5-flash-lite';
-const EMBEDDING_MODEL = Deno.env.get('EMBEDDING_MODEL') ?? 'gemini-embedding-001';
+const ANSWER_MODEL = Deno.env.get('LLM_MODEL_ANSWER') ?? 'gemini-3.8-flash';
+const RERANK_MODEL = Deno.env.get('LLM_MODEL_RERANK') ?? 'gemini-3.5-flash-lite';
+const VERIFY_MODEL = Deno.env.get('LLM_MODEL_VERIFY') ?? 'gemini-3.5-flash-lite';
+const EMBEDDING_MODEL = Deno.env.get('EMBEDDING_MODEL') ?? 'gemini-embedding-2';
 const EMBEDDING_DIM = 768;
 const RERANK_ENABLED = (Deno.env.get('RERANK') ?? 'on') !== 'off';
 

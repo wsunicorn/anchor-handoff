@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     llm_provider_api_key: str = ""
     # "gemini" (thật) | "fake" (vector tất định từ hash — CHỈ dev/CI khi chưa có khoá, không đo chất lượng được).
     embedding_provider: str = "gemini"
-    embedding_model: str = "gemini-embedding-001"
+    embedding_model: str = "gemini-embedding-2"
     embedding_dim: int = 768
     # USD cho mỗi 1M token đầu vào — chỉ để ghi usage_costs, không dùng để chặn.
     embedding_price_per_m_usd: float = 0.15

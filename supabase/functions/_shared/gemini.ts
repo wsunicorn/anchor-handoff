@@ -13,6 +13,10 @@ export const PRICE_PER_M: Record<string, [number, number]> = {
   'gemini-2.5-flash-lite': [0.1, 0.4],
   'gemini-2.5-pro': [1.25, 10],
   'gemini-embedding-001': [0.15, 0],
+  // Bản 3.x chọn 2026-09-13; giá lấy theo bậc tương đương 2.5 — đối chiếu bảng giá thật ở G6.
+  'gemini-3.8-flash': [0.3, 2.5],
+  'gemini-3.5-flash-lite': [0.1, 0.4],
+  'gemini-embedding-2': [0.15, 0],
 };
 
 export function costUsd(model: string, usage: Usage): number {
