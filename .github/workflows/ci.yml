@@ -41,6 +41,28 @@ jobs:
       - if: always()
         run: supabase stop --no-backup
 
+  # services/ingest: chunking thuần + PDF/OCR trên fixture sinh sẵn (G1.1–G1.4).
+  ingest:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/ingest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: services/ingest/requirements.txt
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-vie tesseract-ocr-eng
+      - run: pip install -r requirements.txt
+      - run: python scripts/make_fixtures.py
+      - run: python -m pytest -q
+        env:
+          SUPABASE_URL: http://127.0.0.1:54321
+          SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
+          TESSDATA_PREFIX: /usr/share/tesseract-ocr/5/tessdata
+
   # Cổng chất lượng RAG. Bật bằng repo variable RAG_GATE_ENABLED=true khi G3.7 có `pnpm eval:gate`.
   # Ngưỡng ở docs/SPEC.md §7. Fail ở đây là chặn phát hành, không phải cảnh báo.
   rag-gate:

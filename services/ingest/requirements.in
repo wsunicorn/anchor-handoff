@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+pydantic-settings
+pymupdf
+httpx
+google-genai
+tiktoken
+pytest
+pytest-asyncio
+python-multipart
