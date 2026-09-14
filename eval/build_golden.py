@@ -68,8 +68,10 @@ VI_TRAP: list[tuple[str, str, list[str]]] = [
     (CTU, "Giảng viên phụ trách học phần SP095 tên là gì?", ["TS.", "ThS.", "PGS"]),
     (CTU, "Lệ phí thi lại học phần SP095 là bao nhiêu?", ["đồng", "VND", "lệ phí"]),
     (HCM, "Điểm số tối thiểu để qua môn Vật lý 1 là bao nhiêu?", ["5.0", "4.0", "điểm tối thiểu"]),
-    (HCM, "Bài kiểm tra quá trình lần 2 của Vật lý 1 diễn ra ở tuần 8, đúng không?", ["tuần 8"]),
-    (HCM, "Vật lý 1 có phần thí nghiệm ở phòng lab nào và do ai phụ trách?", ["phòng", "lab", "phụ trách thí nghiệm"]),
+    # Đổi 2026-09-14: câu cũ "kiểm tra lần 2 ở tuần 8, đúng không?" — tài liệu ghi Tuần 11 nên model sửa đúng có căn cứ, không phải bẫy.
+    (HCM, "Mỗi lớp Vật lý 1 nhận tối đa bao nhiêu sinh viên?", ["tối đa", "sinh viên/lớp", "sĩ số"]),
+    # Đổi 2026-09-14: câu "thí nghiệm ở phòng lab nào" — tài liệu ghi 0 tín chỉ thí nghiệm nên model trả lời đúng có căn cứ, không phải bẫy.
+    (HCM, "Giảng viên phụ trách môn Vật lý 1 là ai và email liên hệ là gì?", ["@", "TS.", "ThS.", "PGS"]),
     (HCM, "Công thức tính động năng được đề cương Vật lý 1 nêu ra là gì?", ["mv²/2", "1/2 mv", "K ="]),
     (VJOL, "Bài báo khảo sát bao nhiêu sinh viên và kết quả điểm trung bình tăng bao nhiêu phần trăm?", ["%", "điểm trung bình", "khảo sát"]),
     (VJOL, "Nhiệt nóng chảy của nước đá đo được trong bài thí nghiệm là bao nhiêu J/kg?", ["J/kg", "334", "3,34"]),
