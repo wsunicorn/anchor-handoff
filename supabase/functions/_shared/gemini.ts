@@ -35,7 +35,7 @@ function apiKey(): string {
 /** Thống kê theo từng request (không dùng biến module: isolate per_worker phục vụ nhiều request). */
 export type CallStats = { rate_limit_wait_ms: number };
 
-/** 429 (RPM) đợi theo `retryDelay` của Google, 503 đợi 2s (mỗi loại tối đa 2 lần); hạn mức ngày thì thua ngay. */
+/** 429 (RPM) đợi theo `retryDelay` của Google (tối đa 2 lần), 503 lùi 2/4/8 s (tối đa 3 lần); hạn mức ngày thì thua ngay. */
 async function post(
   path: string,
   body: unknown,
@@ -58,10 +58,12 @@ async function post(
       await new Promise((r) => setTimeout(r, wait * 1000));
       continue;
     }
-    // 503 "overloaded" của Google là thoáng qua (đo trên CI 2026-09-14: 3/100 câu) — thử lại ngắn.
-    if (res.status === 503 && attempt < 2) {
-      if (stats) stats.rate_limit_wait_ms += 2000;
-      await new Promise((r) => setTimeout(r, 2000));
+    // 503 "high demand" của Google là thoáng qua nhưng có lúc kéo dài vài chục giây (giờ cao điểm Mỹ,
+    // đo 2026-09-14) — lùi 2/4/8 s, tối đa 3 lần.
+    if (res.status === 503 && attempt < 3) {
+      const wait = 2000 * 2 ** attempt;
+      if (stats) stats.rate_limit_wait_ms += wait;
+      await new Promise((r) => setTimeout(r, wait));
       continue;
     }
     throw new Error(`gemini_${res.status}: ${text.slice(0, 1200)}`);
@@ -84,6 +86,34 @@ export async function embedQuery(
   const values = json.embedding?.values ?? [];
   if (values.length !== dim) throw new Error(`embedding_dim_mismatch:${values.length}`);
   return values;
+}
+
+/** Nhúng nhiều đoạn trong một lời gọi (lọc trùng quiz G4.2) — không gọi lẻ từng câu. */
+export async function embedBatch(
+  model: string,
+  texts: string[],
+  dim: number,
+  stats?: CallStats,
+): Promise<number[][]> {
+  if (!texts.length) return [];
+  const res = await post(
+    `models/${model}:batchEmbedContents`,
+    {
+      requests: texts.map((text) => ({
+        model: `models/${model}`,
+        content: { parts: [{ text }] },
+        taskType: 'SEMANTIC_SIMILARITY',
+        outputDimensionality: dim,
+      })),
+    },
+    false,
+    stats,
+  );
+  const json = (await res.json()) as { embeddings?: { values?: number[] }[] };
+  const out = (json.embeddings ?? []).map((e) => e.values ?? []);
+  if (out.length !== texts.length || out.some((v) => v.length !== dim))
+    throw new Error(`embedding_batch_mismatch:${out.length}/${texts.length}`);
+  return out;
 }
 
 type GenerateResult = { text: string; usage: Usage };

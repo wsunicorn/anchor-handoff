@@ -36,3 +36,4 @@ docs/samples/*.pdf
 supabase/functions/.env
 .functions.log
 eval/out/
+.quiz-smoke.json
