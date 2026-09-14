@@ -154,7 +154,8 @@ async function main(): Promise<void> {
   const only = process.env.EVAL_ONLY?.split(',')
     .map((s) => s.trim())
     .filter(Boolean);
-  const items = only ? golden.filter((g) => only.includes(g.id)) : golden;
+  // EVAL_ONLY rỗng (CI push không có input) = chạy tất cả.
+  const items = only?.length ? golden.filter((g) => only.includes(g.id)) : golden;
 
   const docIds = new Map<string, string>();
   for (const doc of new Set(items.map((g) => g.doc))) {
