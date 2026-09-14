@@ -35,7 +35,7 @@ function apiKey(): string {
 /** Thống kê theo từng request (không dùng biến module: isolate per_worker phục vụ nhiều request). */
 export type CallStats = { rate_limit_wait_ms: number };
 
-/** 429 (RPM) thì đợi theo `retryDelay` của Google (tối đa 2 lần, trần 20s); hạn mức ngày thì thua ngay. */
+/** 429 (RPM) đợi theo `retryDelay` của Google, 503 đợi 2s (mỗi loại tối đa 2 lần); hạn mức ngày thì thua ngay. */
 async function post(
   path: string,
   body: unknown,
@@ -56,6 +56,12 @@ async function post(
       const wait = Math.min(20, m ? Number(m[1]) : 5);
       if (stats) stats.rate_limit_wait_ms += wait * 1000;
       await new Promise((r) => setTimeout(r, wait * 1000));
+      continue;
+    }
+    // 503 "overloaded" của Google là thoáng qua (đo trên CI 2026-09-14: 3/100 câu) — thử lại ngắn.
+    if (res.status === 503 && attempt < 2) {
+      if (stats) stats.rate_limit_wait_ms += 2000;
+      await new Promise((r) => setTimeout(r, 2000));
       continue;
     }
     throw new Error(`gemini_${res.status}: ${text.slice(0, 600)}`);

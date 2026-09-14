@@ -44,5 +44,6 @@ for i in $(seq 1 60); do
 done
 echo "functions serve trả HTTP $code"
 
-# Free tier flash-lite: 15 lời gọi/phút → giãn nhịp; TTFT của câu bị 429 được tách riêng trong eval.
-EVAL_PACE_MS="${EVAL_PACE_MS:-8000}" EVAL_LABEL="${EVAL_LABEL:-ci}" pnpm exec tsx eval/run.ts gate
+# Free tier flash-lite: 15 lời gọi/phút, mỗi câu 2 lời gọi → 10 s/câu (8 s vẫn dính 429 trên CI);
+# TTFT của câu bị 429/503 được tách riêng trong eval.
+EVAL_PACE_MS="${EVAL_PACE_MS:-10000}" EVAL_LABEL="${EVAL_LABEL:-ci}" pnpm exec tsx eval/run.ts gate
