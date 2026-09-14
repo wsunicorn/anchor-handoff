@@ -64,7 +64,7 @@ async function post(
       await new Promise((r) => setTimeout(r, 2000));
       continue;
     }
-    throw new Error(`gemini_${res.status}: ${text.slice(0, 600)}`);
+    throw new Error(`gemini_${res.status}: ${text.slice(0, 1200)}`);
   }
 }
 

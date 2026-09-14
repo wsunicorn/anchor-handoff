@@ -6,6 +6,7 @@
  *   pnpm eval:seed           chỉ tạo user eval + nạp 6 tài liệu (cho test Maestro), không hỏi
  *   pnpm eval:diff           so hai lần chạy gần nhất, in câu nào tệ đi
  *   EVAL_ONLY=vi-001,en-003  chỉ chạy vài câu;  EVAL_LABEL=rerank-off  gắn nhãn cho lần chạy
+ *   EVAL_PACE_MS=10000       tối thiểu ms giữa hai câu (free tier 15 RPM); mặc định 0
  *
  * Cần: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, INGEST_URL (scripts/eval.sh nạp từ
  * Supabase local). Tài liệu lấy ở docs/samples (bash docs/samples/fetch.sh).
@@ -283,6 +284,11 @@ async function main(): Promise<void> {
       process.stdout.write(`${g.id} LỖI ${msg}\n`);
       if (e instanceof AskError && e.code === 'quota_exceeded') break;
     }
+    // Giãn nhịp giữa hai câu: free tier Gemini 15 lời gọi/phút/model, mỗi câu 2 lời gọi (trả lời + verify).
+    // Tính từ lúc bắt đầu câu để thời gian trả lời không cộng dồn vào nhịp.
+    const pace = Number(process.env.EVAL_PACE_MS ?? 0);
+    const rest = pace - (Date.now() - started);
+    if (rest > 0) await new Promise((r) => setTimeout(r, rest));
   }
 
   // 4. Chỉ số.
