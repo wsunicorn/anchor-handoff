@@ -1,0 +1,89 @@
+# Luồng chính G4: (tuỳ chọn) sinh bộ N câu từ một tài liệu → bật chế độ máy bay → ôn trọn hàng đến hạn
+# (SQLite) → bật mạng lại → tab Ôn tập đồng bộ, tiến độ hiện đúng. Kiểm "không mất, không nhân đôi"
+# bằng scripts/study-sync-check.sh sau khi flow xong.
+# Chạy: bash scripts/maestro.sh .maestro/g4-study-offline.yaml
+#   bash scripts/maestro.sh .maestro/g4-study-offline.yaml -e GENERATE=true   (sinh bộ mới, tốn 1 lời gọi model)
+#   bash scripts/maestro.sh .maestro/g4-study-offline.yaml -e GENERATE=false  (dùng bộ đã có)
+appId: com.anchor.app
+env:
+  EMAIL: eval@anchor.local
+  DOC: en_attention
+  N: "30"
+  # GENERATE truyền từ CLI (-e GENERATE=true|false): env trong file đè lên CLI nên không đặt mặc định ở đây.
+---
+- runFlow: login.yaml
+- extendedWaitUntil:
+    visible: "Thư viện|Library"
+    timeout: 20000
+- runFlow:
+    when:
+      true: ${GENERATE}
+    commands:
+      - tapOn:
+          text: "${DOC}[.] .*"
+      - extendedWaitUntil:
+          visible:
+            id: "reader-quiz"
+          timeout: 20000
+      - tapOn:
+          id: "reader-quiz"
+      - extendedWaitUntil:
+          visible:
+            id: "quiz-submit"
+          timeout: 15000
+      - tapOn:
+          id: "quiz-count"
+      - eraseText
+      - inputText: "${N}"
+      # Không hideKeyboard: trên Android nó gửi BACK khi bàn phím đã ẩn → rớt màn hình.
+      - tapOn:
+          id: "quiz-submit"
+      # Sinh một lượt + lọc: model mạnh, có thể mất tới ~2 phút khi Google báo "high demand".
+      - extendedWaitUntil:
+          visible:
+            id: "quiz-start"
+          timeout: 240000
+      - tapOn:
+          text: "Quay lại|Back"
+          optional: true
+      - back
+      - back
+- tapOn:
+    text: "Ôn tập|Study"
+- extendedWaitUntil:
+    visible:
+      id: "study-review-now"
+    timeout: 30000
+- takeScreenshot: G4-study-before
+# Ôn offline: mất mạng giữa phiên vẫn chấm được (hàng ôn + điểm nằm ở SQLite).
+- setAirplaneMode: enabled
+- tapOn:
+    id: "study-review-now"
+- extendedWaitUntil:
+    visible:
+      id: "card-stem"
+    timeout: 20000
+- repeat:
+    while:
+      visible:
+        id: "card-stem"
+    commands:
+      - tapOn:
+          id: "option-A"
+      - extendedWaitUntil:
+          visible:
+            id: "card-result"
+          timeout: 5000
+      - tapOn:
+          id: "grade-easy"
+- assertVisible:
+    id: "session-finished"
+- takeScreenshot: G4-offline-session-finished
+- setAirplaneMode: disabled
+- tapOn:
+    text: "Về Ôn tập|Back to Study"
+- extendedWaitUntil:
+    visible:
+      id: "study-due"
+    timeout: 20000
+- takeScreenshot: G4-progress-after-sync

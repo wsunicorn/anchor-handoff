@@ -1,6 +1,6 @@
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, List, MessageSquareText } from 'lucide-react-native';
+import { ChevronLeft, List, ListChecks, MessageSquareText } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, Text, useWindowDimensions, View } from 'react-native';
@@ -65,6 +65,15 @@ export default function ReaderScreen() {
           className="min-h-[44px] min-w-[44px] items-center justify-center"
         >
           <MessageSquareText color={c.ink} size={22} />
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('study.generate.title')}
+          testID="reader-quiz"
+          onPress={() => router.push({ pathname: '/documents/[id]/quiz', params: { id } })}
+          className="min-h-[44px] min-w-[44px] items-center justify-center"
+        >
+          <ListChecks color={c.ink} size={22} />
         </Pressable>
         <Pressable
           accessibilityRole="button"

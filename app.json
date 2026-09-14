@@ -85,7 +85,8 @@
           "project": "anchor-mobile",
           "url": "https://sentry.io/"
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true

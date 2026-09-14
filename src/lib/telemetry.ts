@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/react-native';
 import * as Crypto from 'expo-crypto';
 import PostHog from 'posthog-react-native';
+import { LogBox } from 'react-native';
 
 /**
  * Crash (Sentry) và funnel (PostHog). Hai quy tắc:
@@ -21,6 +22,10 @@ Sentry.init({
   environment: __DEV__ ? 'development' : 'production',
   tracesSampleRate: 0.1,
 });
+
+// PostHog log lỗi mạng bằng console.error khi offline → LogBox đỏ đè lên UI trong dev (kiểm chế độ
+// máy bay G4.7). Không phải lỗi của app: hàng đợi sự kiện tự gửi lại khi có mạng.
+if (__DEV__) LogBox.ignoreLogs(['Error while flushing PostHog', 'PostHogFetchNetworkError']);
 
 export const posthog: PostHog | null = posthogKey
   ? new PostHog(posthogKey, {

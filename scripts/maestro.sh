@@ -2,15 +2,15 @@
 # Chạy test Maestro luồng chính (CLAUDE.md: một test Maestro mỗi cổng từ G2).
 # Cần: pnpm db:start, uvicorn (8000), functions serve, Metro (không CI=1), dev client trên emulator,
 # và `pnpm eval:seed` một lần để có user eval + tài liệu.
-#   bash scripts/maestro.sh [.maestro/<flow>.yaml]
+#   bash scripts/maestro.sh [.maestro/<flow>.yaml] [-e KEY=VALUE …]
 set -uo pipefail
 cd "$(dirname "$0")/.."
-FLOW=${1:-.maestro/g2-ask.yaml}
+FLOW=${1:-.maestro/g2-ask.yaml}; shift || true
 if command -v maestro > /dev/null; then
-  maestro test "$FLOW"
+  maestro test "$@" "$FLOW"
 else
   # Windows: bản zip giải nén vào %LOCALAPPDATA%\maestro (github.com/mobile-dev-inc/maestro/releases)
-  "${LOCALAPPDATA:?}/maestro/maestro/bin/maestro.bat" test "$FLOW"
+  "${LOCALAPPDATA:?}/maestro/maestro/bin/maestro.bat" test "$@" "$FLOW"
 fi
 RC=$?
 # Maestro 2.x ghi ảnh chụp vào ~/.maestro/tests/<run>/…; chép sang docs/shots làm bằng chứng thiết bị.
