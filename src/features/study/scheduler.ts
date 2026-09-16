@@ -101,7 +101,11 @@ function minutesBetween(a: Date, b: Date): number {
   return Math.max(0, Math.round((b.getTime() - a.getTime()) / 60_000));
 }
 
-export const NEW_PER_SESSION = 20;
+/**
+ * Trần thẻ mới mỗi phiên. Không dùng 20/ngày kiểu Anki: bộ quiz sinh theo chương (≤ 30 câu) là đơn vị
+ * người học muốn ôn trọn một lần; trần chỉ để một thư viện nhiều bộ không dồn hàng trăm thẻ mới vào một phiên.
+ */
+export const NEW_PER_SESSION = 50;
 
 /**
  * Hàng ôn của một phiên: thẻ đến hạn trước (đến hạn sớm nhất trước), rồi thẻ mới (tối đa

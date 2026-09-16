@@ -43,11 +43,15 @@ env:
           visible:
             id: "quiz-start"
           timeout: 240000
+      # Về thư viện bằng nút quay lại trong header (KEYCODE_BACK hai lần sẽ thoát app).
       - tapOn:
           text: "Quay lại|Back"
-          optional: true
-      - back
-      - back
+      - extendedWaitUntil:
+          visible:
+            id: "reader-quiz"
+          timeout: 10000
+      - tapOn:
+          text: "Quay lại|Back"
 - tapOn:
     text: "Ôn tập|Study"
 - extendedWaitUntil:
