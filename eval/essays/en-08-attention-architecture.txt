@@ -1,0 +1,5 @@
+The Transformer is a sequence transduction model that relies entirely on attention, dispensing with recurrence and convolutions. Its encoder and decoder are each composed of a stack of six identical layers.
+
+Each encoder layer has two sub-layers: multi-head self-attention and a position-wise feed-forward network, with residual connections and layer normalization around each. The base model uses d_model = 512 and h = 8 attention heads.
+
+Because there is no recurrence, the model injects positional encodings using sine and cosine functions of different frequencies. The authors chose learned positional embeddings because they performed much better than the sinusoidal version.

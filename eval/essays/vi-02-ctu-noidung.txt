@@ -1,0 +1,5 @@
+Chương 1 của học phần SP095 là Trường tĩnh điện, gồm 5 tiết, bắt đầu từ khái niệm mở đầu, định luật Coulomb, điện trường, định lý Ostrogradski–Gauss rồi tới điện thế.
+
+Chương 6 nói về các hiệu ứng lượng tử: hiện tượng quang điện, hiệu ứng Compton và ứng dụng. Chương 7 về vật lý nguyên tử và hạt nhân gồm cấu tạo nguyên tử, cấu tạo hạt nhân, năng lượng liên kết, phóng xạ và phản ứng hạt nhân.
+
+Em cho rằng chương 6 nên được dạy 8 tiết thay vì 4 tiết vì nội dung lượng tử khó; tài liệu tham khảo chính là giáo trình của Halliday.

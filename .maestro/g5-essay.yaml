@@ -1,0 +1,45 @@
+# Luồng chính G5: mở tài liệu → Chấm tự luận → dán bài → chấm → thấy dòng "phản hồi tham khảo" đứng đầu,
+# nhận xét neo theo đoạn với thanh neo grounded/inferred, có trang nguồn; không có nhận xét "unsupported".
+# Chạy: bash scripts/maestro.sh .maestro/g5-essay.yaml
+appId: com.anchor.app
+env:
+  EMAIL: eval@anchor.local
+  DOC: vi_decuong_ctu
+  ESSAY: "Hoc phan Vat ly dai cuong SP095 co 2 tin chi, gom 30 tiet ly thuyet va 60 tiet tu hoc, do Bo mon Su pham Vat ly phu trach. Diem thi ket thuc hoc phan chiem 50% tong diem, con diem chuyen can yeu cau du it nhat 90% so tiet. Bai kiem tra giua ky chiem 30% va bai tap nhom chiem 20%."
+---
+- runFlow: login.yaml
+- extendedWaitUntil:
+    visible: "Thư viện|Library"
+    timeout: 20000
+- tapOn:
+    text: "${DOC}[.] .*"
+- extendedWaitUntil:
+    visible:
+      id: "reader-essay"
+    timeout: 20000
+- tapOn:
+    id: "reader-essay"
+- extendedWaitUntil:
+    visible:
+      id: "essay-body"
+    timeout: 15000
+- tapOn:
+    id: "essay-body"
+# Maestro inputText trên Android không gõ được dấu tiếng Việt ổn định → bài không dấu; server vẫn truy hồi được.
+- inputText: "${ESSAY}"
+# Bàn phím che nút; cuộn tới nút thay vì hideKeyboard (BACK).
+- scrollUntilVisible:
+    element:
+      id: "essay-submit"
+    direction: DOWN
+- tapOn:
+    id: "essay-submit"
+- extendedWaitUntil:
+    visible:
+      id: "essay-disclaimer"
+    timeout: 180000
+- assertVisible:
+    id: "comment-grounded|comment-inferred"
+- assertNotVisible:
+    id: "comment-unsupported"
+- takeScreenshot: G5-essay-feedback

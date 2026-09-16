@@ -94,6 +94,7 @@ export async function embedBatch(
   texts: string[],
   dim: number,
   stats?: CallStats,
+  taskType: 'SEMANTIC_SIMILARITY' | 'RETRIEVAL_QUERY' = 'SEMANTIC_SIMILARITY',
 ): Promise<number[][]> {
   if (!texts.length) return [];
   const res = await post(
@@ -102,7 +103,7 @@ export async function embedBatch(
       requests: texts.map((text) => ({
         model: `models/${model}`,
         content: { parts: [{ text }] },
-        taskType: 'SEMANTIC_SIMILARITY',
+        taskType,
         outputDimensionality: dim,
       })),
     },
@@ -134,6 +135,39 @@ function usageOf(json: {
     tokens_in: json.usageMetadata?.promptTokenCount ?? 0,
     tokens_out: json.usageMetadata?.candidatesTokenCount ?? 0,
   };
+}
+
+/** Ảnh → chữ (G5.1, bài viết tay). Một lời gọi, không stream; model đa phương thức. */
+export async function transcribeImage(
+  model: string,
+  mimeType: string,
+  base64: string,
+  instruction: string,
+  stats?: CallStats,
+): Promise<GenerateResult> {
+  const res = await post(
+    `models/${model}:generateContent`,
+    {
+      contents: [
+        {
+          role: 'user',
+          parts: [{ inlineData: { mimeType, data: base64 } }, { text: instruction }],
+        },
+      ],
+      generationConfig: {
+        temperature: 0,
+        maxOutputTokens: 4096,
+        thinkingConfig: { thinkingLevel: 'minimal' },
+      },
+    },
+    false,
+    stats,
+  );
+  const json = (await res.json()) as {
+    candidates?: { content?: { parts?: Part[] } }[];
+    usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
+  };
+  return { text: textOf(json.candidates?.[0]?.content?.parts), usage: usageOf(json) };
 }
 
 /** Một lời gọi không stream; `json: true` ép trả JSON (rerank, verify). */

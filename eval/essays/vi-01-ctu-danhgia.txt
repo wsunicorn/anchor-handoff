@@ -1,0 +1,7 @@
+Học phần Vật lý đại cương SP095 là học phần 2 tín chỉ, gồm 30 tiết lý thuyết và 60 tiết tự học, do Bộ môn Sư phạm Vật lý thuộc Khoa Sư phạm phụ trách. Học phần không yêu cầu môn tiên quyết.
+
+Về đánh giá, điểm chuyên cần yêu cầu sinh viên dự ít nhất 90% số tiết, còn thi kết thúc học phần chiếm 50% tổng điểm. Ngoài ra còn có bài kiểm tra giữa kỳ chiếm 30% và bài tập nhóm chiếm 20%.
+
+Nội dung học phần gồm bảy chương, bắt đầu từ trường tĩnh điện với định luật Coulomb và định lý Ostrogradski–Gauss, đi qua dòng điện không đổi, hiện tượng điện từ, giao thoa và nhiễu xạ ánh sáng, rồi kết thúc bằng vật lý nguyên tử và hạt nhân.
+
+Theo em, học phần này rất hữu ích cho sinh viên sư phạm vì nó giúp rèn luyện tư duy vật lý; tuy nhiên, thời lượng 30 tiết là quá ít để đi hết bảy chương nên giảng viên thường phải lược bớt phần quang học.

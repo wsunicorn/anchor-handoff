@@ -86,7 +86,14 @@
           "url": "https://sentry.io/"
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Anchor cần máy ảnh để chụp bài viết tay của bạn và chuyển thành chữ.",
+          "photosPermission": "Anchor cần thư viện ảnh để chọn ảnh bài viết tay của bạn."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

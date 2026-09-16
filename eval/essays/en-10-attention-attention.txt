@@ -1,0 +1,5 @@
+Scaled dot-product attention computes the dot products of the query with all keys, divides each by the square root of d_k, and applies a softmax to obtain the weights on the values.
+
+The scaling factor is needed because for large d_k the dot products grow large in magnitude, pushing the softmax into regions with extremely small gradients.
+
+Multi-head attention lets the model jointly attend to information from different representation subspaces. The paper uses 16 heads with d_k = d_v = 32 for the base model, which keeps the total computation similar to single-head attention with full dimensionality.

@@ -1,0 +1,5 @@
+Vật lý 1 mã PHYS130902 là môn học của Khoa Khoa học Ứng dụng, Trường Đại học Sư phạm Kỹ thuật TP.HCM, dành cho các ngành kỹ thuật.
+
+Môn học có ba mục tiêu G1, G2, G3: kiến thức cơ bản về cơ học cổ điển, dao động và sóng cơ, nhiệt học; khả năng lập luận và giải thích hiện tượng; kỹ năng làm việc nhóm và đọc tài liệu tiếng Anh.
+
+Môn học có 3 tín chỉ lý thuyết và 1 tín chỉ thí nghiệm tại phòng lab của khoa.

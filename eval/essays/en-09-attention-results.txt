@@ -1,0 +1,5 @@
+On the WMT 2014 English-to-German task, the big Transformer achieves 28.4 BLEU, improving over the previous best results including ensembles by more than 2 BLEU.
+
+On English-to-French, the big model reaches a BLEU score of 41.8 after training for 3.5 days on eight P100 GPUs, a small fraction of the training cost of earlier models.
+
+The authors also show that the Transformer generalizes to English constituency parsing. In my view the most important contribution is the reduction in training cost rather than the BLEU gain, since the base model was trained in only 12 hours.
