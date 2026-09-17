@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildFeedback,
+  commentClaims,
   DEFAULT_RUBRIC,
   type GradeChunk,
   parseComments,
@@ -22,6 +23,7 @@ const raw = (over: Partial<RawComment> = {}): RawComment => ({
   name: 'Đúng nội dung',
   level: 'met',
   comment: 'Đoạn mở bài nêu đúng định nghĩa entropy như tài liệu.',
+  evidence: 'Tài liệu định nghĩa entropy là độ đo mức hỗn loạn của hệ.',
   essay_paragraph: 0,
   citation: 'c1',
   ...over,
@@ -82,14 +84,27 @@ describe('buildFeedback (G5.4 — qua lớp kiểm chứng)', () => {
     expect(fb.comments.map((c) => c.verdict)).toEqual(['grounded', 'inferred']);
     expect(fb.comments[1]!.citation.page_no).toBe(5);
     expect(fb.omitted).toBe(3);
-    expect(fb.criteria.map((c) => c.level)).toEqual(['met', 'partial', 'partial', 'partial']);
+    expect(fb.criteria.map((c) => c.level)).toEqual(['met', 'partial', 'unverified', 'unverified']);
     expect(fb.paragraph_count).toBe(2);
   });
 
-  it('không nhận xét nào có căn cứ → không có gì hiển thị, mọi tiêu chí về partial', () => {
+  it('không nhận xét nào có căn cứ → không có gì hiển thị, mọi tiêu chí về unverified', () => {
     const fb = buildFeedback(DEFAULT_RUBRIC, [raw()], sources, [{ i: 0, score: 0.2 }], 1);
     expect(fb.comments).toEqual([]);
     expect(fb.omitted).toBe(1);
-    expect(fb.criteria.every((c) => c.level === 'partial')).toBe(true);
+    expect(fb.criteria.every((c) => c.level === 'unverified')).toBe(true);
+  });
+});
+
+describe('commentClaims', () => {
+  it('đối chiếu phần evidence, không phải phần đánh giá; thiếu evidence thì lấy comment', () => {
+    const { claims } = commentClaims(
+      [raw(), raw({ evidence: '', comment: 'Chỉ có nhận xét.' })],
+      sources,
+    );
+    expect(claims.map((c) => c.claim)).toEqual([
+      'Tài liệu định nghĩa entropy là độ đo mức hỗn loạn của hệ.',
+      'Chỉ có nhận xét.',
+    ]);
   });
 });

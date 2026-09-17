@@ -96,11 +96,12 @@ export default {
     noContent: 'Tài liệu không có đoạn nào liên quan tới bài viết này.',
     failed: 'Chưa chấm được lúc này. Thử lại sau.',
     disclaimer: 'Phản hồi tham khảo theo rubric — không phải điểm chính thức.',
-    levels: { met: 'Đạt', partial: 'Một phần', unmet: 'Chưa đạt' },
+    levels: { met: 'Đạt', partial: 'Một phần', unmet: 'Chưa đạt', unverified: 'Chưa đủ căn cứ' },
     paragraph: 'Đoạn {{n}}',
     noComment: 'Không có nhận xét có căn cứ cho đoạn này.',
     omitted: 'Đã ẩn {{count}} nhận xét vì tài liệu không chống lưng.',
     source: 'Tr. {{page}}',
+    evidence: 'Tài liệu',
     newEssay: 'Chấm bài khác',
   },
   consent: {

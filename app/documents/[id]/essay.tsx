@@ -16,10 +16,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import {
+  type DisplayLevel,
   EssayError,
   type GradedComment,
   type GradeResult,
-  type Level,
   type RubricCriterion,
   useGradeEssay,
   useTranscribe,
@@ -244,10 +244,11 @@ function Results({
     list.push(cm);
     byParagraph.set(cm.essay_paragraph, list);
   }
-  const levelClass: Record<Level, string> = {
+  const levelClass: Record<DisplayLevel, string> = {
     met: 'text-verified',
     partial: 'text-inferred',
     unmet: 'text-unsupported',
+    unverified: 'text-ink-muted',
   };
 
   return (
@@ -290,6 +291,11 @@ function Results({
                       {cm.criterion} · {t(`verdict.${cm.verdict}`)}
                     </Text>
                     <Text className="type-answerBody text-ink">{cm.comment}</Text>
+                    {cm.evidence ? (
+                      <Text className="type-label text-ink-muted">
+                        {t('essay.evidence')}: {cm.evidence}
+                      </Text>
+                    ) : null}
                     <Pressable
                       accessibilityRole="link"
                       onPress={() => onOpenSource(cm.citation.page_no, cm.citation.chunk_id)}

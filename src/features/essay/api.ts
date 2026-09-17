@@ -9,7 +9,13 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { supabase } from '@/lib/supabase';
 import { track } from '@/lib/telemetry';
 
-export type { GradedComment, GradedFeedback, Level, RubricCriterion } from '@shared/grade';
+export type {
+  DisplayLevel,
+  GradedComment,
+  GradedFeedback,
+  Level,
+  RubricCriterion,
+} from '@shared/grade';
 
 export class EssayError extends Error {
   constructor(

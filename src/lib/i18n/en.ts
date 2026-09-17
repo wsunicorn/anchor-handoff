@@ -96,11 +96,12 @@ export default {
     noContent: 'The document has no passage related to this essay.',
     failed: 'Could not grade right now. Try again later.',
     disclaimer: 'Reference feedback against the rubric — not an official grade.',
-    levels: { met: 'Met', partial: 'Partly', unmet: 'Not met' },
+    levels: { met: 'Met', partial: 'Partly', unmet: 'Not met', unverified: 'Not enough evidence' },
     paragraph: 'Paragraph {{n}}',
     noComment: 'No grounded comment for this paragraph.',
     omitted: '{{count}} comments hidden because the document does not support them.',
     source: 'p. {{page}}',
+    evidence: 'Document says',
     newEssay: 'Grade another',
   },
   consent: {

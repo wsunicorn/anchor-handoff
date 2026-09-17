@@ -83,9 +83,15 @@ loại câu có đáp án nằm trong đề; loại câu ngắn dưới 8 từ; 
 > Nêu điều bài làm được trước, rồi điều thiếu. Chỉ ra chỗ sửa cụ thể, không viết lại bài hộ.
 > Không chấm chính tả trừ khi rubric có tiêu chí đó.
 > Không đưa ra điểm số tuyệt đối — trả mức theo từng tiêu chí của rubric.
-> Chỉ trả JSON: `{"criteria":[{"name","level","comment","essay_paragraph","citation"}]}`.
+> Mỗi nhận xét có `comment` (đánh giá bài viết) và `evidence` (một câu nêu tài liệu nói gì làm căn cứ,
+> sát nguyên văn đoạn đã trích).
+> Chỉ trả JSON: `{"criteria":[{"name","level","comment","evidence","essay_paragraph","citation"}]}`.
 
-Toàn bộ `comment` phải đi qua lớp kiểm chứng ở mục 2 trước khi hiển thị.
+Lớp kiểm chứng ở mục 2 đối chiếu **`evidence`** với đoạn trích; không khớp thì cả nhận xét bị ẩn.
+Lý do (2026-09-17): nhận xét về lập luận/diễn đạt là mệnh đề về *bài viết*, đoạn tài liệu không thể
+"chống lưng" cho nó — kiểm thẳng `comment` làm verifier ẩn gần hết nhận xét kiểu này (1/10 bài trống
+hoàn toàn). Kiểm phần căn cứ mới đúng việc: chặn nhận xét bịa điều tài liệu không nói, giữ nhận xét
+có căn cứ thật.
 
 ---
 

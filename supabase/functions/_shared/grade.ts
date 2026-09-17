@@ -18,6 +18,8 @@ export const DEFAULT_RUBRIC: RubricCriterion[] = [
 
 export const LEVELS = ['met', 'partial', 'unmet'] as const;
 export type Level = (typeof LEVELS)[number];
+/** Mức hiển thị: thêm `unverified` khi mọi nhận xét của tiêu chí bị ẩn — không dám nói đạt hay chưa. */
+export type DisplayLevel = Level | 'unverified';
 
 export const MAX_ESSAY_PARAGRAPHS = 12;
 export const MAX_ESSAY_CHARS = 12_000;
@@ -56,9 +58,9 @@ export function gradeSystemPrompt(rubric: RubricCriterion[], lang: 'vi' | 'en'):
     'Nêu điều bài làm được trước, rồi điều thiếu. Chỉ ra chỗ sửa cụ thể, không viết lại bài hộ.',
     'Không chấm chính tả trừ khi rubric có tiêu chí đó.',
     'Không đưa ra điểm số tuyệt đối — `level` của mỗi tiêu chí chỉ là một trong: "met" (đạt), "partial" (một phần), "unmet" (chưa đạt).',
-    'Nhận xét phải nói được điều gì trong tài liệu chống lưng cho nó; nhận xét không dựa vào đoạn tài liệu nào sẽ bị hệ thống ẩn.',
-    `Viết nhận xét bằng ${LANG_NAME[lang]}.`,
-    'Chỉ trả JSON: {"criteria":[{"name":"…","level":"met|partial|unmet","comment":"…","essay_paragraph":0,"citation":"c1"}]}.',
+    'Mỗi nhận xét có hai phần: `comment` là đánh giá về bài viết; `evidence` là MỘT câu nêu tài liệu nói gì làm căn cứ, diễn đạt sát nguyên văn đoạn đã trích (không suy diễn). Hệ thống đối chiếu `evidence` với đoạn trích — không khớp thì cả nhận xét bị ẩn.',
+    `Viết bằng ${LANG_NAME[lang]}.`,
+    'Chỉ trả JSON: {"criteria":[{"name":"…","level":"met|partial|unmet","comment":"…","evidence":"…","essay_paragraph":0,"citation":"c1"}]}.',
   ].join('\n');
 }
 
@@ -72,6 +74,8 @@ export type RawComment = {
   name: string;
   level: Level;
   comment: string;
+  /** Tài liệu nói gì làm căn cứ — phần được lớp kiểm chứng đối chiếu với đoạn trích. */
+  evidence: string;
   essay_paragraph: number;
   citation: string;
 };
@@ -91,6 +95,7 @@ export function parseComments(text: string, paragraphCount: number): RawComment[
     if (!x || typeof x !== 'object') continue;
     const name = str(x.name);
     const comment = str(x.comment);
+    const evidence = str(x.evidence);
     const levelRaw = str(x.level).toLowerCase();
     const level = (LEVELS as readonly string[]).includes(levelRaw) ? (levelRaw as Level) : null;
     const para = Number(x.essay_paragraph);
@@ -102,6 +107,7 @@ export function parseComments(text: string, paragraphCount: number): RawComment[
       name,
       level,
       comment,
+      evidence,
       essay_paragraph: Math.min(Math.max(0, para), Math.max(0, paragraphCount - 1)),
       citation,
     });
@@ -109,7 +115,11 @@ export function parseComments(text: string, paragraphCount: number): RawComment[
   return out;
 }
 
-/** Mệnh đề cho lớp kiểm chứng G3: mỗi nhận xét là một claim, đối chiếu với đoạn nó trích. */
+/**
+ * Mệnh đề cho lớp kiểm chứng G3: đối chiếu phần `evidence` (tài liệu nói gì) với đoạn nó trích.
+ * Nhận xét về lập luận/diễn đạt của bài viết không phải mệnh đề về tài liệu — kiểm phần căn cứ của nó
+ * mới đúng việc (quyết định 2026-09-17, xem PROMPTS.md §4). Thiếu `evidence` thì kiểm chính `comment`.
+ */
 export function commentClaims(
   comments: RawComment[],
   sources: Record<string, GradeChunk>,
@@ -122,7 +132,7 @@ export function commentClaims(
     claims.push({
       p: 0,
       s: i,
-      claim: c.comment,
+      claim: c.evidence || c.comment,
       citations: [
         { code: src.code, chunk_id: src.chunk_id, page_no: src.page_no, bboxes: src.bboxes },
       ],
@@ -136,13 +146,14 @@ export function commentClaims(
 export type GradedComment = {
   criterion: string;
   comment: string;
+  evidence: string;
   essay_paragraph: number;
   verdict: Exclude<Verdict, 'unsupported'>;
   score: number;
   citation: CitationSource;
 };
 
-export type GradedCriterion = { name: string; weight: number; level: Level };
+export type GradedCriterion = { name: string; weight: number; level: DisplayLevel };
 
 export type GradedFeedback = {
   criteria: GradedCriterion[];
@@ -155,7 +166,7 @@ export type GradedFeedback = {
 /**
  * G5.4: ghép điểm kiểm chứng. Nhận xét `unsupported`, không được chấm, hoặc citation lạ → ẩn, đếm vào
  * `omitted`. Mức của tiêu chí lấy theo nhận xét đầu tiên còn hiển thị của tiêu chí đó; tiêu chí không còn
- * nhận xét nào thì `partial` (không dám nói đạt hay chưa khi mọi căn cứ đều bị ẩn).
+ * nhận xét nào thì `unverified` (không dám nói đạt hay chưa khi mọi căn cứ đều bị ẩn).
  */
 export function buildFeedback(
   rubric: RubricCriterion[],
@@ -179,6 +190,7 @@ export function buildFeedback(
     kept.push({
       criterion: c.name,
       comment: c.comment,
+      evidence: c.evidence,
       essay_paragraph: c.essay_paragraph,
       verdict,
       score: score ?? 0,
@@ -190,7 +202,8 @@ export function buildFeedback(
       (c) =>
         c.name === r.name && kept.some((k) => k.criterion === c.name && k.comment === c.comment),
     );
-    return { name: r.name, weight: r.weight, level: first?.level ?? 'partial' };
+    const level: DisplayLevel = first?.level ?? 'unverified';
+    return { name: r.name, weight: r.weight, level };
   });
   return { criteria, comments: kept, omitted, paragraph_count: paragraphCount };
 }

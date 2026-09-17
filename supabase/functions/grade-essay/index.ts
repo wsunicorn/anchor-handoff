@@ -41,8 +41,11 @@ const Body = z.object({
     .max(8)
     .optional(),
   lang: z.enum(['vi', 'en']).optional(),
+  // Chỉ eval dùng: trả thêm nhận xét thô + điểm kiểm chứng để soi vì sao bị ẩn.
+  debug: z.boolean().optional(),
 });
 
+// ADR-0001: chấm dùng model mạnh nhất. 3.8-flash (nhận thinkingLevel low) chưa kiểm được vì hết quota ngày → tạm 3.5-flash.
 const GRADE_MODEL = Deno.env.get('LLM_MODEL_GRADE') ?? 'gemini-3.5-flash';
 const VERIFY_MODEL = Deno.env.get('LLM_MODEL_VERIFY') ?? 'gemini-3.5-flash-lite';
 const EMBEDDING_MODEL = Deno.env.get('EMBEDDING_MODEL') ?? 'gemini-embedding-2';
@@ -194,6 +197,9 @@ Deno.serve(async (req) => {
         paragraphs,
         raw_comments: comments.length,
         usage: gen.usage,
+        ...(parsed.data.debug
+          ? { debug: { comments, scores, codes: chunks.map((c) => `${c.code}:p${c.page_no}`) } }
+          : {}),
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );

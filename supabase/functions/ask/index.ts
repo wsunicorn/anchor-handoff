@@ -210,6 +210,7 @@ Deno.serve(async (req) => {
                 if (!firstToken) {
                   firstToken = Date.now() - startedAt;
                   timing.rate_limit_wait_ms = stats.rate_limit_wait_ms;
+                  timing.hedged = stats.hedged ?? 0;
                 }
                 sse.send('delta', { text: delta });
               },

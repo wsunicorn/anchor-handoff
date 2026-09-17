@@ -33,7 +33,14 @@ function apiKey(): string {
 }
 
 /** Thống kê theo từng request (không dùng biến module: isolate per_worker phục vụ nhiều request). */
-export type CallStats = { rate_limit_wait_ms: number };
+export type CallStats = { rate_limit_wait_ms: number; hedged?: number };
+
+/**
+ * Đuôi trễ của Google trên free tier: thỉnh thoảng một request treo 10–30 s rồi mới có byte đầu
+ * (đo CI 2026-09-16: 4/100 câu) dù request kế tiếp trả trong 1 s. "Hedge": quá `firstByteMs` mà chưa
+ * có header thì huỷ và gửi lại một lần. Rẻ hơn nhiều so với để người dùng đợi.
+ */
+const HEDGE = { embed: 1500, generate: 6000 } as const;
 
 /** 429 (RPM) đợi theo `retryDelay` của Google (tối đa 2 lần), 503 lùi 2/4/8 s (tối đa 3 lần); hạn mức ngày thì thua ngay. */
 async function post(
@@ -41,14 +48,32 @@ async function post(
   body: unknown,
   stream = false,
   stats?: CallStats,
+  firstByteMs = HEDGE.generate,
 ): Promise<Response> {
   const url = `${BASE}/${path}${stream ? '?alt=sse' : ''}`;
+  let hedged = false;
   for (let attempt = 0; ; attempt += 1) {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey() },
-      body: JSON.stringify(body),
-    });
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), firstByteMs);
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey() },
+        body: JSON.stringify(body),
+        signal: ctl.signal,
+      });
+    } catch (e) {
+      clearTimeout(timer);
+      if (ctl.signal.aborted && !hedged) {
+        hedged = true;
+        if (stats) stats.hedged = (stats.hedged ?? 0) + 1;
+        attempt -= 1; // lần gửi lại không tính vào số lần thử 429/503
+        continue;
+      }
+      throw e;
+    }
+    clearTimeout(timer);
     if (res.ok) return res;
     const text = await res.text().catch(() => '');
     if (res.status === 429 && attempt < 2 && !/PerDay/.test(text)) {
@@ -81,6 +106,7 @@ export async function embedQuery(
     { content: { parts: [{ text }] }, taskType: 'RETRIEVAL_QUERY', outputDimensionality: dim },
     false,
     stats,
+    HEDGE.embed,
   );
   const json = (await res.json()) as { embedding?: { values?: number[] } };
   const values = json.embedding?.values ?? [];
@@ -225,27 +251,47 @@ export async function generateStream(
     stats?: CallStats;
   } = {},
 ): Promise<GenerateResult> {
-  const res = await post(
-    `models/${model}:streamGenerateContent`,
-    {
-      systemInstruction: { parts: [{ text: system }] },
-      contents: [{ role: 'user', parts: [{ text: user }] }],
-      generationConfig: {
-        temperature: opts.temperature ?? 0,
-        maxOutputTokens: opts.maxTokens ?? 1024,
-        thinkingConfig: { thinkingLevel: opts.thinkingLevel ?? 'minimal' },
-      },
+  const body = {
+    systemInstruction: { parts: [{ text: system }] },
+    contents: [{ role: 'user', parts: [{ text: user }] }],
+    generationConfig: {
+      temperature: opts.temperature ?? 0,
+      maxOutputTokens: opts.maxTokens ?? 1024,
+      thinkingConfig: { thinkingLevel: opts.thinkingLevel ?? 'minimal' },
     },
-    true,
-    opts.stats,
-  );
-  const reader = res.body!.getReader();
+  };
+  // Header có thể về ngay mà token đầu vẫn treo → hedge thêm một lớp ở mức "byte đầu của stream".
+  for (let attempt = 0; ; attempt += 1) {
+    const res = await post(`models/${model}:streamGenerateContent`, body, true, opts.stats);
+    const reader = res.body!.getReader();
+    const first = await Promise.race([
+      reader.read(),
+      new Promise<'timeout'>((r) => setTimeout(() => r('timeout'), HEDGE.generate)),
+    ]);
+    if (first === 'timeout') {
+      await reader.cancel().catch(() => undefined);
+      if (attempt === 0) {
+        if (opts.stats) opts.stats.hedged = (opts.stats.hedged ?? 0) + 1;
+        continue;
+      }
+      throw new Error('gemini_stream_stalled');
+    }
+    return readSse(reader, first, onDelta);
+  }
+}
+
+async function readSse(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  first: ReadableStreamReadResult<Uint8Array>,
+  onDelta: (text: string) => void | Promise<void>,
+): Promise<GenerateResult> {
   const decoder = new TextDecoder();
   let buffer = '';
   let full = '';
   let usage: Usage = { tokens_in: 0, tokens_out: 0 };
+  let chunk = first;
   for (;;) {
-    const { value, done } = await reader.read();
+    const { value, done } = chunk;
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
     let nl: number;
@@ -266,6 +312,7 @@ export async function generateStream(
       }
       if (json.usageMetadata) usage = usageOf(json);
     }
+    chunk = await reader.read();
   }
   return { text: full, usage };
 }
