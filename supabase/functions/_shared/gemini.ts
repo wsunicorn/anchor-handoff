@@ -40,7 +40,9 @@ export type CallStats = { rate_limit_wait_ms: number; hedged?: number };
  * (đo CI 2026-09-16: 4/100 câu) dù request kế tiếp trả trong 1 s. "Hedge": quá `firstByteMs` mà chưa
  * có header thì huỷ và gửi lại một lần. Rẻ hơn nhiều so với để người dùng đợi.
  */
-const HEDGE = { embed: 1500, generate: 6000 } as const;
+// Chỉ hedge việc trả lời (stream) và nhúng; lời gọi unary (rerank/verify/quiz/grade) chỉ có header khi
+// đã sinh xong nên không hedge được — đo CI 2026-09-17: hedge 6 s trên unary làm 11/100 câu lỗi AbortError.
+const HEDGE = { embed: 1500, stream: 3000, none: 0 } as const;
 
 /** 429 (RPM) đợi theo `retryDelay` của Google (tối đa 2 lần), 503 lùi 2/4/8 s (tối đa 3 lần); hạn mức ngày thì thua ngay. */
 async function post(
@@ -48,13 +50,13 @@ async function post(
   body: unknown,
   stream = false,
   stats?: CallStats,
-  firstByteMs = HEDGE.generate,
+  firstByteMs: number = HEDGE.none,
 ): Promise<Response> {
   const url = `${BASE}/${path}${stream ? '?alt=sse' : ''}`;
   let hedged = false;
   for (let attempt = 0; ; attempt += 1) {
     const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), firstByteMs);
+    const timer = firstByteMs > 0 ? setTimeout(() => ctl.abort(), firstByteMs) : null;
     let res: Response;
     try {
       res = await fetch(url, {
@@ -64,7 +66,7 @@ async function post(
         signal: ctl.signal,
       });
     } catch (e) {
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
       if (ctl.signal.aborted && !hedged) {
         hedged = true;
         if (stats) stats.hedged = (stats.hedged ?? 0) + 1;
@@ -73,7 +75,7 @@ async function post(
       }
       throw e;
     }
-    clearTimeout(timer);
+    if (timer) clearTimeout(timer);
     if (res.ok) return res;
     const text = await res.text().catch(() => '');
     if (res.status === 429 && attempt < 2 && !/PerDay/.test(text)) {
@@ -262,19 +264,26 @@ export async function generateStream(
   };
   // Header có thể về ngay mà token đầu vẫn treo → hedge thêm một lớp ở mức "byte đầu của stream".
   for (let attempt = 0; ; attempt += 1) {
-    const res = await post(`models/${model}:streamGenerateContent`, body, true, opts.stats);
+    const res = await post(
+      `models/${model}:streamGenerateContent`,
+      body,
+      true,
+      opts.stats,
+      HEDGE.stream,
+    );
     const reader = res.body!.getReader();
-    const first = await Promise.race([
-      reader.read(),
-      new Promise<'timeout'>((r) => setTimeout(() => r('timeout'), HEDGE.generate)),
-    ]);
+    // Lần gửi lại thì chờ tới cùng: trả lời chậm vẫn hơn lỗi.
+    const first =
+      attempt === 0
+        ? await Promise.race([
+            reader.read(),
+            new Promise<'timeout'>((r) => setTimeout(() => r('timeout'), HEDGE.stream)),
+          ])
+        : await reader.read();
     if (first === 'timeout') {
       await reader.cancel().catch(() => undefined);
-      if (attempt === 0) {
-        if (opts.stats) opts.stats.hedged = (opts.stats.hedged ?? 0) + 1;
-        continue;
-      }
-      throw new Error('gemini_stream_stalled');
+      if (opts.stats) opts.stats.hedged = (opts.stats.hedged ?? 0) + 1;
+      continue;
     }
     return readSse(reader, first, onDelta);
   }
