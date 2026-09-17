@@ -56,7 +56,8 @@ async function post(
   let hedged = false;
   for (let attempt = 0; ; attempt += 1) {
     const ctl = new AbortController();
-    const timer = firstByteMs > 0 ? setTimeout(() => ctl.abort(), firstByteMs) : null;
+    // Chỉ đặt đồng hồ ở lần gửi đầu; lần gửi lại chờ tới cùng (đo CI 2026-09-17: huỷ lần hai → 8 lỗi).
+    const timer = firstByteMs > 0 && !hedged ? setTimeout(() => ctl.abort(), firstByteMs) : null;
     let res: Response;
     try {
       res = await fetch(url, {
