@@ -1,6 +1,6 @@
 # TASKS.md
 
-> **Cổng hiện tại: G6** — cập nhật dòng này ở cuối mỗi phiên. (G0, G1, G2 đóng 2026-09-13; G3 đóng 2026-09-14; G4 đóng 2026-09-16; G5 đóng 2026-09-18.)
+> **Cổng hiện tại: G6** (chờ #9 để mua sandbox; đang làm song song G7 — còn 7.4 chờ OPPO, 7.5 iOS chờ iPhone, 7.7/7.8 chờ quota Gemini 14:00 19/9, 7.9 cần người) — cập nhật dòng này ở cuối mỗi phiên. (G0, G1, G2 đóng 2026-09-13; G3 đóng 2026-09-14; G4 đóng 2026-09-16; G5 đóng 2026-09-18.)
 > Quy tắc: chỉ làm task trong cổng hiện tại. Đóng cổng bằng "Tiêu chí thoát", không phải bằng cảm giác xong.
 
 Ước lượng dưới đây tính theo ~12 giờ/tuần. Tổng khoảng 13 tuần đến khi nộp store.
