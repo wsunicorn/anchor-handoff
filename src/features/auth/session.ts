@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 import { create } from 'zustand';
 
+import { configurePurchases } from '@/features/billing/api';
 import i18next from '@/lib/i18n';
 import { AUTH_REDIRECT_URL, supabase } from '@/lib/supabase';
 import { identifyUser, resetUser, track } from '@/lib/telemetry';
@@ -24,7 +25,10 @@ export function bootstrapSession(): () => void {
   const { data } = supabase.auth.onAuthStateChange((event, session) => {
     useSession.getState().setSession(session);
     // Gắn/tách định danh giả danh cho crash + funnel theo vòng đời session.
-    if (session?.user) void identifyUser(session.user.id);
+    if (session?.user) {
+      void identifyUser(session.user.id);
+      configurePurchases(session.user.id); // app_user_id = uuid Supabase để webhook ánh xạ (G6.1)
+    }
     if (event === 'SIGNED_OUT') resetUser();
     if (event === 'SIGNED_IN') track('signed_in');
   });

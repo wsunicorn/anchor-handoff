@@ -13,13 +13,12 @@ import {
   HttpError,
   requireUser,
 } from '../_shared/http.ts';
+import { modelFor, tierContext } from '../_shared/tiering.ts';
 
 const Body = z.object({
   image_base64: z.string().min(100).max(6_000_000), // ≈ 4,5 MB ảnh — app đã nén về ~1600px
   mime_type: z.enum(['image/jpeg', 'image/png', 'image/webp']),
 });
-
-const OCR_MODEL = Deno.env.get('LLM_MODEL_OCR') ?? 'gemini-3.5-flash-lite';
 
 const INSTRUCTION = [
   'Chép lại toàn bộ chữ viết tay trong ảnh thành văn bản thuần, giữ nguyên ngôn ngữ, thứ tự và cách chia đoạn (đoạn cách nhau bằng một dòng trống).',
@@ -42,6 +41,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!profile?.ai_consent_at)
       throw new HttpError(403, 'consent_required', 'Cần đồng ý sử dụng tính năng AI trước.');
+    const OCR_MODEL = modelFor('ocr', await tierContext(admin, userId));
 
     const r = await transcribeImage(
       OCR_MODEL,

@@ -13,6 +13,8 @@ const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 export type AskResult = {
   answer: VerifiedAnswer;
   cached: boolean;
+  /** Vượt trần chi phí ngày → trả lời bằng model rẻ (G6.6). */
+  degraded: boolean;
 };
 
 /**
@@ -35,6 +37,7 @@ export function useAsk(documentId: string) {
       track('ask_started', { lang });
       let verified: VerifiedAnswer | null = null;
       let cached = false;
+      let degraded = false;
       for await (const ev of askStream(
         functionsUrl,
         anonKey,
@@ -43,8 +46,10 @@ export function useAsk(documentId: string) {
         abort.current.signal,
       )) {
         if (ev.type === 'verified') verified = ev.data.answer;
-        else if (ev.type === 'done') cached = ev.data.cached;
-        else if (ev.type === 'error') throw new AskError(ev.data.code, ev.data.message, ev.data);
+        else if (ev.type === 'done') {
+          cached = ev.data.cached;
+          degraded = ev.data.degraded ?? false;
+        } else if (ev.type === 'error') throw new AskError(ev.data.code, ev.data.message, ev.data);
       }
       if (!verified)
         throw new AskError('no_verified_answer', 'Máy chủ không trả kết quả đã kiểm chứng.');
@@ -54,7 +59,7 @@ export function useAsk(documentId: string) {
         paragraphs: verified.paragraphs.length,
         cached,
       });
-      return { answer: verified, cached };
+      return { answer: verified, cached, degraded };
     },
     onSettled: () => void qc.invalidateQueries({ queryKey: ['quota'] }),
   });

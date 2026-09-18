@@ -17,7 +17,7 @@ JWT=$(curl -s -X POST "$SUPA/auth/v1/token?grant_type=password" -H "apikey: $ANO
   -d "{\"email\":\"$EMAIL\",\"password\":\"$PASS\"}" | python -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
 UID_=$(python -c "import sys,json,base64; t='$JWT'.split('.')[1]; t+='='*(-len(t)%4); print(json.loads(base64.urlsafe_b64decode(t))['sub'])")
 curl -s -X PATCH "$SUPA/rest/v1/profiles?id=eq.$UID_" -H "apikey: $SERVICE" -H "Authorization: Bearer $SERVICE" \
-  -H "Content-Type: application/json" -d "{\"tier\":\"${ASK_TIER:-pro}\",\"ai_consent_at\":\"now()\"}" >/dev/null
+  -H "Content-Type: application/json" -d "{\"entitlement\":\"${ASK_TIER:-pro}\",\"ai_consent_at\":\"now()\"}" >/dev/null
 
 DOC=$(curl -s -X POST "http://127.0.0.1:8000/documents?title=$(basename "$PDF" .pdf)" -H "Authorization: Bearer $JWT" \
   -H "Content-Type: application/pdf" --data-binary "@$PDF" | python -c "import sys,json; print(json.load(sys.stdin)['document_id'])")

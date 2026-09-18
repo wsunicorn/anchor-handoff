@@ -34,6 +34,7 @@ import {
   RERANK_CANDIDATES,
   rerankPrompt,
 } from '../_shared/prompts.ts';
+import { modelFor, tierContext } from '../_shared/tiering.ts';
 import {
   MAX_CLAIMS,
   parseScores,
@@ -52,9 +53,7 @@ const Body = z.object({
   nocache: z.boolean().optional(),
 });
 
-const ANSWER_MODEL = Deno.env.get('LLM_MODEL_ANSWER') ?? 'gemini-3.5-flash';
-const RERANK_MODEL = Deno.env.get('LLM_MODEL_RERANK') ?? 'gemini-3.5-flash-lite';
-const VERIFY_MODEL = Deno.env.get('LLM_MODEL_VERIFY') ?? 'gemini-3.5-flash-lite';
+// Model theo tầng và ngắt mạch: xem _shared/tiering.ts (G6.3, G6.6).
 const EMBEDDING_MODEL = Deno.env.get('EMBEDDING_MODEL') ?? 'gemini-embedding-2';
 const EMBEDDING_DIM = 768;
 // G2.3 đo 2026-09-13 trên bộ vàng: rerank listwise không tăng recall (1.000 off vs 0.975 on) mà thêm ~1.1s
@@ -75,12 +74,16 @@ Deno.serve(async (req) => {
 
     const { data: profile } = await admin
       .from('profiles')
-      .select('ai_consent_at, tier')
+      .select('ai_consent_at')
       .eq('id', userId)
       .maybeSingle();
     if (!profile?.ai_consent_at) {
       throw new HttpError(403, 'consent_required', 'Cần đồng ý sử dụng tính năng AI trước.');
     }
+    const tierCtx = await tierContext(admin, userId);
+    const ANSWER_MODEL = modelFor('answer', tierCtx);
+    const RERANK_MODEL = modelFor('rerank', tierCtx);
+    const VERIFY_MODEL = modelFor('verify', tierCtx);
 
     const { data: doc } = await admin
       .from('documents')
@@ -334,6 +337,7 @@ Deno.serve(async (req) => {
           nearest_page: nearestPage,
           cached: false,
           usage: result.usage,
+          degraded: tierCtx.degraded,
           latency_ms: Date.now() - startedAt,
           timing: { ...timing, model_ttft_ms: firstToken, total_ms: Date.now() - t0 },
         });

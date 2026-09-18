@@ -23,6 +23,7 @@ export default function ConsentScreen() {
       router.back();
       return;
     }
+    // Đóng màn này; Thư viện lấy lại focus sẽ mở paywall cứng nếu tài khoản chưa dùng thử (ADR-0001 §5).
     setConsent.mutate(true, { onSuccess: () => router.back() });
   };
 

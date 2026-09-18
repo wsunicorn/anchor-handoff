@@ -57,6 +57,11 @@ class Supabase:
         self._raise(r)
         return r.json()
 
+    async def rpc(self, fn: str, args: dict[str, Any]) -> Any:
+        r = await self._http.post(f"/rest/v1/rpc/{fn}", json=args)
+        self._raise(r)
+        return r.json()
+
     async def delete(self, table: str, **filters: str) -> None:
         r = await self._http.delete(f"/rest/v1/{table}", params=filters)
         self._raise(r)

@@ -1,11 +1,12 @@
 import { FlashList } from '@shopify/flash-list';
-import { useRouter } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
+import { useEntitlement } from '@/features/billing/api';
 import { useAiConsent } from '@/features/consent/api';
 import {
   deleteDocument,
@@ -23,15 +24,29 @@ export default function LibraryScreen() {
   const docs = useDocuments();
   const importDoc = useImportDocument();
   const consent = useAiConsent();
+  const ent = useEntitlement();
   // Người dùng bấm "Thêm" khi chưa đồng ý → mở màn đồng ý; đồng ý xong tự tiếp tục nạp.
   const pendingImport = useRef(false);
+  const paywallShown = useRef(false);
 
-  useEffect(() => {
-    if (consent === true && pendingImport.current) {
-      pendingImport.current = false;
-      importDoc.mutate();
-    }
-  }, [consent, importDoc]);
+  // Chạy khi Thư viện lấy lại focus (đóng màn đồng ý / paywall). Thứ tự: paywall cứng sau onboarding
+  // (ADR-0001 §5) một lần cho tài khoản chưa dùng thử/chưa có gói, rồi mới tiếp tục việc nạp đang chờ.
+  useFocusEffect(
+    useCallback(() => {
+      if (consent !== true) return;
+      const fresh = ent.data?.entitlement === 'none' && !ent.data.trial_ends_at;
+      if (fresh && !paywallShown.current) {
+        paywallShown.current = true;
+        router.push('/paywall');
+        return;
+      }
+      if (pendingImport.current) {
+        pendingImport.current = false;
+        importDoc.mutate();
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [consent, ent.data?.entitlement, ent.data?.trial_ends_at]),
+  );
 
   const onAdd = () => {
     if (consent === undefined) return;

@@ -26,6 +26,7 @@ import {
   quizSystemPrompt,
   quizUserPrompt,
 } from '../_shared/quiz.ts';
+import { modelFor, tierContext } from '../_shared/tiering.ts';
 
 const Body = z
   .object({
@@ -37,7 +38,6 @@ const Body = z
   })
   .refine((b) => b.to_page >= b.from_page, { message: 'to_page < from_page' });
 
-const QUIZ_MODEL = Deno.env.get('LLM_MODEL_QUIZ') ?? 'gemini-3.5-flash';
 const EMBEDDING_MODEL = Deno.env.get('EMBEDDING_MODEL') ?? 'gemini-embedding-2';
 const EMBEDDING_DIM = 768;
 const FREE_QUIZ_LIMIT = 1; // ADR-0001 §5
@@ -66,11 +66,13 @@ Deno.serve(async (req) => {
 
     const { data: profile } = await admin
       .from('profiles')
-      .select('ai_consent_at, tier')
+      .select('ai_consent_at')
       .eq('id', userId)
       .maybeSingle();
     if (!profile?.ai_consent_at)
       throw new HttpError(403, 'consent_required', 'Cần đồng ý sử dụng tính năng AI trước.');
+    const tierCtx = await tierContext(admin, userId);
+    const QUIZ_MODEL = modelFor('quiz', tierCtx);
 
     const { data: doc } = await admin
       .from('documents')
@@ -86,7 +88,7 @@ Deno.serve(async (req) => {
     const lang = parsed.data.lang ?? (doc.lang === 'en' ? 'en' : 'vi');
 
     // Hạn mức đếm ở server, trước khi gọi model (ADR-0001 §4.4).
-    if (profile.tier !== 'pro') {
+    if (tierCtx.tier !== 'pro') {
       const { data: ownDocs } = await admin.from('documents').select('id').eq('owner', userId);
       const { count } = await admin
         .from('quizzes')
@@ -209,6 +211,7 @@ Deno.serve(async (req) => {
         generated: raw.length,
         dropped: droppedCount,
         usage: gen.usage,
+        degraded: tierCtx.degraded,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );

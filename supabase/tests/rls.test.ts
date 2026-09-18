@@ -185,3 +185,66 @@ describe.skipIf(!configured)('RLS: user B không đọc được tài liệu c�
     expect(data).toEqual([]);
   });
 });
+
+describe.skipIf(!configured)('Billing (G6): client không tự nâng tầng; dùng thử một lần', () => {
+  let admin: SupabaseClient;
+  const stamp = Date.now();
+  let idC = '';
+  let c: SupabaseClient;
+
+  beforeAll(async () => {
+    admin = createClient(url, serviceKey, noSession);
+    idC = await createUser(admin, `rls-c-${stamp}@test.local`);
+    c = await signedInClient(`rls-c-${stamp}@test.local`);
+  });
+
+  afterAll(async () => {
+    await admin.auth.admin.deleteUser(idC);
+  });
+
+  it('client sửa tier/entitlement bị từ chối; sửa locale thì được', async () => {
+    const t = await c.from('profiles').update({ tier: 'pro' }).eq('id', idC);
+    expect(t.error).not.toBeNull();
+    const e = await c.from('profiles').update({ entitlement: 'lifetime' }).eq('id', idC);
+    expect(e.error).not.toBeNull();
+    const l = await c.from('profiles').update({ locale: 'en' }).eq('id', idC).select('locale');
+    expect(l.error).toBeNull();
+    expect(l.data?.[0]?.locale).toBe('en');
+    const { data } = await admin
+      .from('profiles')
+      .select('tier, entitlement')
+      .eq('id', idC)
+      .single();
+    expect(data).toEqual({ tier: 'free', entitlement: 'none' });
+  });
+
+  it('start_trial: 21 ngày, pro trong lúc dùng thử, gọi lần hai không gia hạn', async () => {
+    const first = await c.rpc('start_trial');
+    expect(first.error).toBeNull();
+    const ends = new Date(first.data as string).getTime();
+    expect(ends - Date.now()).toBeGreaterThan(20 * 86_400_000);
+    const ent = await c.rpc('my_entitlement');
+    expect(ent.data?.[0]).toMatchObject({ entitlement: 'trial', tier: 'pro' });
+    const again = await c.rpc('start_trial');
+    expect(new Date(again.data as string).getTime()).toBe(ends);
+    // Hết hạn (service role lùi ngày) → tầng hiệu lực về free, cột tier vẫn là bản chiếu cũ.
+    await admin
+      .from('profiles')
+      .update({ trial_ends_at: new Date(Date.now() - 1000).toISOString() })
+      .eq('id', idC);
+    const expired = await c.rpc('my_entitlement');
+    expect(expired.data?.[0]?.tier).toBe('free');
+    const quota = await c.rpc('my_question_quota');
+    expect(quota.data?.[0]).toMatchObject({ tier: 'free', quota: 20 });
+  });
+
+  it('cost_dashboard/daily_cost_usd chỉ service role gọi được', async () => {
+    const denied = await c.rpc('daily_cost_usd', { p_owner: idC });
+    expect(denied.error).not.toBeNull();
+    const ok = await admin.rpc('daily_cost_usd', { p_owner: idC });
+    expect(ok.error).toBeNull();
+    expect(Number(ok.data)).toBe(0);
+    const dash = await admin.rpc('cost_dashboard', { p_days: 7 });
+    expect(dash.error).toBeNull();
+  });
+});

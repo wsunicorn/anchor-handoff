@@ -51,8 +51,10 @@ def detect_lang(text: str) -> str:
 
 
 async def _profile(user_id: str) -> dict[str, Any]:
-    rows = await supabase.select("profiles", select="tier,ai_consent_at", id=f"eq.{user_id}")
-    return rows[0] if rows else {"tier": "free", "ai_consent_at": None}
+    # Tầng lấy từ effective_tier() (dùng thử/gói trả tiền/hết hạn — 0005_billing), không đọc cột tier.
+    rows = await supabase.select("profiles", select="ai_consent_at", id=f"eq.{user_id}")
+    tier = await supabase.rpc("effective_tier", {"p_owner": user_id})
+    return {"tier": tier if tier == "pro" else "free", "ai_consent_at": rows[0]["ai_consent_at"] if rows else None}
 
 
 async def accept_upload(user_id: str, title: str, pdf: bytes) -> Accepted:

@@ -30,6 +30,7 @@ import {
   HttpError,
   requireUser,
 } from '../_shared/http.ts';
+import { modelFor, tierContext } from '../_shared/tiering.ts';
 import { MAX_CLAIMS, parseScores, VERIFY_SYSTEM, verifyUserPrompt } from '../_shared/verify.ts';
 
 const Body = z.object({
@@ -45,9 +46,7 @@ const Body = z.object({
   debug: z.boolean().optional(),
 });
 
-// ADR-0001: chấm dùng model mạnh nhất. 3.8-flash (nhận thinkingLevel low) chưa kiểm được vì hết quota ngày → tạm 3.5-flash.
-const GRADE_MODEL = Deno.env.get('LLM_MODEL_GRADE') ?? 'gemini-3.5-flash';
-const VERIFY_MODEL = Deno.env.get('LLM_MODEL_VERIFY') ?? 'gemini-3.5-flash-lite';
+// Model theo tầng và ngắt mạch: _shared/tiering.ts. (3.8-flash chưa kiểm được vì hết quota ngày → 3.5-flash.)
 const EMBEDDING_MODEL = Deno.env.get('EMBEDDING_MODEL') ?? 'gemini-embedding-2';
 const EMBEDDING_DIM = 768;
 // ADR-0001 §5: free 1 bài, pro 60 / tháng.
@@ -68,11 +67,14 @@ Deno.serve(async (req) => {
 
     const { data: profile } = await admin
       .from('profiles')
-      .select('ai_consent_at, tier')
+      .select('ai_consent_at')
       .eq('id', userId)
       .maybeSingle();
     if (!profile?.ai_consent_at)
       throw new HttpError(403, 'consent_required', 'Cần đồng ý sử dụng tính năng AI trước.');
+    const tierCtx = await tierContext(admin, userId);
+    const GRADE_MODEL = modelFor('grade', tierCtx);
+    const VERIFY_MODEL = modelFor('verify', tierCtx);
 
     const { data: doc } = await admin
       .from('documents')
@@ -85,7 +87,7 @@ Deno.serve(async (req) => {
       throw new HttpError(409, 'document_not_ready', 'Tài liệu chưa xử lý xong.');
     const lang = parsed.data.lang ?? (doc.lang === 'en' ? 'en' : 'vi');
 
-    const tier = profile.tier === 'pro' ? 'pro' : 'free';
+    const tier = tierCtx.tier;
     const since = tier === 'pro' ? new Date(new Date().setDate(1)).toISOString() : '1970-01-01';
     const { count } = await admin
       .from('usage_costs')
@@ -197,6 +199,7 @@ Deno.serve(async (req) => {
         paragraphs,
         raw_comments: comments.length,
         usage: gen.usage,
+        degraded: tierCtx.degraded,
         ...(parsed.data.debug
           ? { debug: { comments, scores, codes: chunks.map((c) => `${c.code}:p${c.page_no}`) } }
           : {}),

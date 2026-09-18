@@ -374,3 +374,8 @@ site_url = "https://github.com/wsunicorn/anchor-handoff"
 [remotes.production.auth.email]
 # Rate-limit gửi email của hosted giữ 1 phút (local 1s để test).
 max_frequency = "1m0s"
+
+# Webhook RevenueCat: gateway không kiểm JWT (RevenueCat không có JWT Supabase); hàm tự kiểm
+# `Authorization: Bearer <REVENUECAT_WEBHOOK_SECRET>`.
+[functions.revenuecat-webhook]
+verify_jwt = false

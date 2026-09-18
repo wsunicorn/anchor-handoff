@@ -104,11 +104,18 @@ export default function AskScreen() {
               {errorText}
             </Text>
           ) : ask.data ? (
-            <AnswerView
-              answer={ask.data.answer}
-              onOpenCitation={openCitation}
-              onExplain={setExplain}
-            />
+            <View className="gap-md">
+              {ask.data.degraded ? (
+                <Text className="type-label text-inferred" testID="ask-degraded">
+                  {t('paywall.degraded')}
+                </Text>
+              ) : null}
+              <AnswerView
+                answer={ask.data.answer}
+                onOpenCitation={openCitation}
+                onExplain={setExplain}
+              />
+            </View>
           ) : (
             <Text className="type-ui text-ink-muted">{t('ask.placeholder')}</Text>
           )}

@@ -48,6 +48,7 @@ type ItemResult = {
   ttft_ms: number | null;
   latency_ms: number | null;
   timing?: Record<string, number>;
+  degraded?: boolean;
   answer: string;
 };
 
@@ -106,6 +107,18 @@ function tokens(text: string): string[] {
     .filter((w) => w.length >= 3 && !STOP.has(w));
 }
 
+/** eval/hand_grades.json — quyết định của người cho câu heuristic không đo được (xem _doc trong file). */
+const HAND_GRADES: { id: string; pattern: string; verdict: 'pass' | 'fail' }[] = (
+  JSON.parse(readFileSync(join(ROOT, 'eval', 'hand_grades.json'), 'utf8')) as {
+    grades: { id: string; pattern: string; verdict: 'pass' | 'fail' }[];
+  }
+).grades;
+
+function handGrade(id: string, sentence: string): 'pass' | 'fail' | null {
+  const hit = HAND_GRADES.find((h) => h.id === id && new RegExp(h.pattern, 'i').test(sentence));
+  return hit ? hit.verdict : null;
+}
+
 function overlap(a: string, b: string): number {
   const ta = tokens(a);
   if (!ta.length) return 1;
@@ -140,7 +153,7 @@ async function main(): Promise<void> {
   if (!userId) throw new Error('không tạo được user eval');
   await admin
     .from('profiles')
-    .update({ tier: 'pro', ai_consent_at: new Date().toISOString() })
+    .update({ entitlement: 'pro', ai_consent_at: new Date().toISOString() })
     .eq('id', userId);
   const user = createClient(url, anon, { auth: { persistSession: false } });
   const { data: session, error: signErr } = await user.auth.signInWithPassword({ email, password });
@@ -195,6 +208,7 @@ async function main(): Promise<void> {
       );
       const insufficient = r.done?.insufficient ?? false;
 
+      const g_id = g.id;
       const grade = (
         sentences: { text: string; citations: { chunk_id: string }[]; uncited?: boolean }[],
         chunkTexts: Map<string, string>,
@@ -212,7 +226,9 @@ async function main(): Promise<void> {
             (t.match(/\d[\d.,]*/g) ?? []).map((n) => n.replace(/[.,]/g, ''));
           const joinedDigits = new Set(digits(joined));
           const numbersOk = digits(s.text).every((n) => joinedDigits.has(n) || joined.includes(n));
-          if (score >= 0.5 && numbersOk) g.pass += 1;
+          const hand = handGrade(g_id, s.text);
+          if (hand === 'pass' || (hand === null && score >= 0.5 && numbersOk)) g.pass += 1;
+          else if (hand === 'fail') g.fail += 1;
           else if (score >= 0.3) g.ambiguous.push(s.text);
           else g.fail += 1;
         }
@@ -256,6 +272,7 @@ async function main(): Promise<void> {
         ttft_ms: r.ttft_ms,
         latency_ms: Date.now() - started,
         timing: r.done?.timing,
+        degraded: r.done?.degraded ?? false,
         answer: r.text,
       });
       process.stdout.write(

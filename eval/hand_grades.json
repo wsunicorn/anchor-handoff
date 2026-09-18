@@ -1,0 +1,23 @@
+{
+  "_doc": "Chấm tay cho câu mà heuristic so khớp (trùng từ ≥ 0,5 + số) không đo được — thường là ký hiệu toán/slide thưa chữ. Mỗi mục: id câu hỏi, regex (không phân biệt hoa thường) khớp câu trả lời sau khi bỏ mã [cN], verdict pass|fail, lý do kèm trang đã đối chiếu. Thêm mục = một quyết định của người, ghi ngày. Regex phải đủ hẹp để chỉ khớp đúng mệnh đề đã đối chiếu.",
+  "grades": [
+    {
+      "id": "en-038",
+      "verdict": "pass",
+      "reason": "2026-09-18 — slides_mit tr.10: 'Intrinsic: Small impurity concentration or high T, [V_K]pure >> [Ca_K], then [V_K] = [V_K]pure'. Model viết lại bằng LaTeX nên trùng từ < 0,3.",
+      "pattern": "^the intrinsic regime .*(small|low) impurity concentration .*high temperature"
+    },
+    {
+      "id": "en-038",
+      "verdict": "pass",
+      "reason": "2026-09-18 — slides_mit tr.10: 'Extrinsic: High impurity concentration or low T, [V_K]pure << [Ca_K], then [V_K] = [Ca_K]'.",
+      "pattern": "^the extrinsic regime .*high impurity concentration .*low temperature"
+    },
+    {
+      "id": "en-039",
+      "verdict": "pass",
+      "reason": "2026-09-18 — mọi slide có chân trang '3.205 L5 11/9/06'; câu chỉ có 'L5' và ngày nên không còn từ ≥ 3 ký tự để so.",
+      "pattern": "^this slide set is from (the )?lecture.*11/9/06"
+    }
+  ]
+}

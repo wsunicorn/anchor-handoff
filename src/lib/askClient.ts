@@ -12,6 +12,8 @@ export type AskDone = {
   nearest_page: number | null;
   cached: boolean;
   usage: { tokens_in: number; tokens_out: number } | null;
+  /** Vượt trần chi phí ngày → đang chạy model rẻ (G6.6); app nói thật với người dùng. */
+  degraded?: boolean;
   latency_ms?: number;
   timing?: Record<string, number>;
 };
