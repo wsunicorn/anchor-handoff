@@ -112,6 +112,43 @@ export function useQuizzes() {
 
 export type QueueItem = { card: CardRow; question: QuestionRow };
 
+export type CardListItem = {
+  id: string;
+  stem: string;
+  documentTitle: string;
+  dueAt: string;
+  state: number;
+};
+
+/** Mọi thẻ, sắp theo hạn — cho màn danh sách (G7.4). Một câu SQL join, không N+1. */
+export function useAllCards() {
+  return useQuery({
+    queryKey: ['study', 'cards'],
+    queryFn: async (): Promise<CardListItem[]> => {
+      const rows = db
+        .select({
+          id: schema.cards.id,
+          stem: schema.questions.stem,
+          documentTitle: schema.quizzes.documentTitle,
+          dueAt: schema.cards.dueAt,
+          fsrsState: schema.cards.fsrsState,
+        })
+        .from(schema.cards)
+        .innerJoin(schema.questions, eq(schema.questions.id, schema.cards.questionId))
+        .innerJoin(schema.quizzes, eq(schema.quizzes.id, schema.questions.quizId))
+        .orderBy(asc(schema.cards.dueAt))
+        .all();
+      return rows.map((r) => ({
+        id: r.id,
+        stem: r.stem,
+        documentTitle: r.documentTitle,
+        dueAt: r.dueAt,
+        state: Number((r.fsrsState as FsrsState).state ?? 0),
+      }));
+    },
+  });
+}
+
 /** Tài liệu của một bộ quiz (để mở trang nguồn từ thẻ). */
 export function quizDocumentId(quizId: string): string | null {
   const row = db

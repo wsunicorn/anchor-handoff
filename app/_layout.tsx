@@ -49,6 +49,7 @@ function RootLayout() {
             <Stack.Screen name="documents/[id]/quiz" />
             <Stack.Screen name="documents/[id]/essay" />
             <Stack.Screen name="study/session" />
+            <Stack.Screen name="study/cards" />
             <Stack.Screen name="consent" options={{ presentation: 'modal' }} />
             <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
           </Stack.Protected>

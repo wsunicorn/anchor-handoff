@@ -42,6 +42,11 @@ export default {
     quizDue: '{{count}} due',
     learned: 'Learned {{learned}}/{{total}}',
     coverage: 'Coverage by chapter',
+    browseCards: 'Browse all cards',
+    allCards: '{{count}} cards',
+    cardNew: 'New',
+    cardDueNow: 'Due',
+    cardDueIn: 'Due in {{count}} days',
     generate: {
       title: 'Create a review set',
       body: 'Pick a page range. Questions are generated once from your document with source pages; reviewing never costs a call.',

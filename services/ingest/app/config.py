@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     embedding_provider: str = "gemini"
     embedding_model: str = "gemini-embedding-2"
     embedding_dim: int = 768
+    # Free tier Gemini: 100 nội dung nhúng / phút / model (mỗi phần tử trong batch tính một). 0 = không giãn (đã bật billing).
+    embed_contents_per_minute: int = 90
     # USD cho mỗi 1M token đầu vào — chỉ để ghi usage_costs, không dùng để chặn.
     embedding_price_per_m_usd: float = 0.15
 

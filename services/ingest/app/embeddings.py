@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 
 from google import genai
 from google.genai import types
@@ -13,7 +14,7 @@ from app.config import settings
 
 log = logging.getLogger(__name__)
 
-BATCH = 100  # giới hạn số nội dung mỗi lời gọi của API
+BATCH = 20  # ≤ 100 theo API; nhỏ để giãn nhịp theo hạn mức nội dung/phút được đều
 
 
 class EmbeddingUnavailable(RuntimeError):
@@ -48,7 +49,10 @@ async def embed_documents(texts: list[str]) -> list[list[float]]:
     out: list[list[float]] = []
     for i in range(0, len(texts), BATCH):
         batch = texts[i : i + BATCH]
-        for attempt in range(4):
+        # Giãn nhịp theo hạn mức nội dung/phút (free tier) — đo 2026-09-18: 200 trang không giãn → 429 liên tục 5 phút.
+        if i and settings.embed_contents_per_minute > 0:
+            await asyncio.sleep(60.0 * len(batch) / settings.embed_contents_per_minute)
+        for attempt in range(6):
             try:
                 resp = await client.aio.models.embed_content(
                     model=settings.embedding_model,
@@ -59,11 +63,12 @@ async def embed_documents(texts: list[str]) -> list[list[float]]:
                     ),
                 )
                 break
-            except Exception as e:  # lỗi mạng/429: lùi luỹ thừa, tối đa 4 lần
-                if attempt == 3:
+            except Exception as e:  # lỗi mạng/429: lùi luỹ thừa, tôn trọng retryDelay của Google (≤ 60 s)
+                if attempt == 5 or "PerDay" in str(e):
                     raise
-                wait = 2**attempt
-                log.warning("embed lỗi (%s), thử lại sau %ss", e, wait)
+                m = re.search(r"retryDelay'?\s*[:=]\s*'?(\d+)s", str(e))
+                wait = min(60, max(2**attempt, int(m.group(1)) + 1 if m else 0))
+                log.warning("embed lỗi (%s), thử lại sau %ss", str(e)[:120], wait)
                 await asyncio.sleep(wait)
         for emb in resp.embeddings or []:
             values = list(emb.values or [])

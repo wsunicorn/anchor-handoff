@@ -42,6 +42,11 @@ export default {
     quizDue: '{{count}} đến hạn',
     learned: 'Đã học {{learned}}/{{total}}',
     coverage: 'Độ phủ theo chương',
+    browseCards: 'Xem tất cả thẻ',
+    allCards: '{{count}} thẻ',
+    cardNew: 'Mới',
+    cardDueNow: 'Đến hạn',
+    cardDueIn: 'Còn {{count}} ngày',
     generate: {
       title: 'Tạo bộ ôn tập',
       body: 'Chọn khoảng trang. Câu hỏi được sinh một lần từ chính tài liệu, kèm trang nguồn; ôn lại không tốn lượt.',

@@ -66,7 +66,17 @@ export default function StudyScreen() {
 
         {quizzes.data && quizzes.data.length > 0 ? (
           <View className="gap-sm">
-            <Text className="type-label text-ink-muted">{t('study.coverage')}</Text>
+            <View className="flex-row items-center justify-between">
+              <Text className="type-label text-ink-muted">{t('study.coverage')}</Text>
+              <Pressable
+                accessibilityRole="link"
+                testID="study-all-cards"
+                onPress={() => router.push('/study/cards')}
+                className="min-h-[44px] justify-center"
+              >
+                <Text className="type-label text-ink underline">{t('study.browseCards')}</Text>
+              </Pressable>
+            </View>
             {quizzes.data.map((q) => {
               const scope = q.scope as { from_page?: number; to_page?: number };
               return (
