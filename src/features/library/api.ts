@@ -7,6 +7,8 @@ import { type Accepted, IngestError, uploadPdf } from '@/lib/ingest';
 import { supabase } from '@/lib/supabase';
 import { track } from '@/lib/telemetry';
 
+import { documentNameFromUri } from './shareIntent';
+
 export type DocumentRow = Database['public']['Tables']['documents']['Row'];
 export type DocumentStatus = DocumentRow['status'];
 
@@ -80,20 +82,11 @@ export function useImportFromUri() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (uri: string): Promise<Accepted | null> => {
-      // URI của DocumentsProvider mã hoá cả đường dẫn trong đoạn cuối ("primary%3ADownload%2Fa.pdf")
-      // → giải mã trước rồi mới lấy phần sau dấu '/' hoặc ':' cuối cùng.
-      const name =
-        decodeURIComponent(uri.replace(/[?#].*$/, ''))
-          .split(/[/:]/)
-          .pop()
-          ?.trim() || 'Tài liệu.pdf';
+      const name = documentNameFromUri(uri);
       const dest = new File(Paths.cache, `share-${Date.now()}.pdf`);
       await new File(uri).copy(dest);
       track('document_import_started', { source: 'intent' });
-      const accepted = await uploadPdf({
-        uri: dest.uri,
-        name: name.endsWith('.pdf') ? name : `${name}.pdf`,
-      });
+      const accepted = await uploadPdf({ uri: dest.uri, name });
       track('document_import_accepted', { reused: accepted.reused, pages: accepted.page_count });
       return accepted;
     },

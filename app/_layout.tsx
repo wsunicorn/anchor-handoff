@@ -10,7 +10,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { bootstrapSession, useSession } from '@/features/auth/session';
 import { configurePurchases } from '@/features/billing/api';
-import { listenShareIntent } from '@/features/library/shareIntent';
+import { listenShareIntent } from '@/features/library/shareIntentListener';
 import { wrapRoot } from '@/lib/telemetry';
 
 // Giữ splash cho tới khi biết đã đăng nhập hay chưa — tránh nháy màn đăng nhập rồi biến mất.

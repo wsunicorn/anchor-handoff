@@ -1,4 +1,3 @@
-import { Linking } from 'react-native';
 import { create } from 'zustand';
 
 /**
@@ -6,7 +5,7 @@ import { create } from 'zustand';
  * qua `CFBundleDocumentTypes` (app.json) — hệ thống chép file vào Inbox rồi mở app với `file://…`; chưa kiểm trên
  * iPhone. URI được cất vào đây; Thư viện lấy ra (`take`) và nạp khi đã có đồng ý AI.
  *
- * Hai nguồn cùng đổ vào: `app/+native-intent.ts` (Expo Router) và `listenShareIntent()` gọi thẳng
+ * Hai nguồn cùng đổ vào: `app/+native-intent.ts` (Expo Router) và `listenShareIntent()` (shareIntentListener.ts) gọi thẳng
  * `Linking.getInitialURL()`. Cần nguồn thứ hai vì Expo Router chỉ chờ `getInitialURL` 150 ms khi
  * khởi động lạnh (expo-router/fork/useLinking.native.js) — bản release 2026-09-18 mở từ intent VIEW
  * quá hạn đó nên router không thấy URL. `seen` khử trùng lặp giữa hai nguồn.
@@ -38,12 +37,17 @@ export function isSharedFileUrl(url: string): boolean {
   return /^(content|file):\/\//.test(url);
 }
 
-/** Gọi một lần ở root layout. Trả về hàm huỷ đăng ký. */
-export function listenShareIntent(): () => void {
-  const push = (url: string | null) => {
-    if (url && isSharedFileUrl(url)) useShareIntent.getState().set(url);
-  };
-  void Linking.getInitialURL().then(push, () => undefined);
-  const sub = Linking.addEventListener('url', ({ url }) => push(url));
-  return () => sub.remove();
+/**
+ * Tên tài liệu từ URI. URI của DocumentsProvider mã hoá cả đường dẫn trong đoạn cuối
+ * ("primary%3ADownload%2Fa.pdf") → giải mã trước rồi mới lấy phần sau dấu '/' hoặc ':' cuối cùng.
+ */
+export function documentNameFromUri(uri: string, fallback = 'Tài liệu.pdf'): string {
+  let decoded = uri.replace(/[?#].*$/, '');
+  try {
+    decoded = decodeURIComponent(decoded);
+  } catch {
+    // URI mã hoá hỏng: giữ nguyên, vẫn lấy được đoạn cuối
+  }
+  const name = decoded.split(/[/:]/).pop()?.trim() || fallback;
+  return name.toLowerCase().endsWith('.pdf') ? name : `${name}.pdf`;
 }
