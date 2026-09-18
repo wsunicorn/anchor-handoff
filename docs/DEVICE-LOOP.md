@@ -76,7 +76,9 @@ tick task, đừng viết "đã kiểm trên cả hai nền tảng".
 
 ## 7. Test Maestro (từ G2)
 
-Một luồng chính mỗi cổng, đặt ở `.maestro/`. Chạy: `bash scripts/maestro.sh` (mặc định `.maestro/g2-ask.yaml`).
+Một luồng chính mỗi cổng, đặt ở `.maestro/`: `g2-ask` (hỏi đáp), `g4-study-offline` (sinh quiz → máy bay →
+ôn → đồng bộ; `-e GENERATE=true|false`), `g5-essay` (chấm tự luận); `login.yaml` là subflow dùng chung.
+Chạy: `bash scripts/maestro.sh <flow> [-e KEY=VALUE]` (mặc định `.maestro/g2-ask.yaml`).
 Cần: stack local (`pnpm db:start`, uvicorn 8000, `functions serve`), Metro **không** `CI=1`, dev client
 trên emulator, và `pnpm eval:seed` một lần (tạo `eval@anchor.local` + nạp 6 PDF `docs/samples`).
 Luồng tự đăng nhập bằng mã OTP đọc từ Mailpit (`.maestro/otp.js`), nên không cần email thật.

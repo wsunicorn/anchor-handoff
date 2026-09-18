@@ -79,11 +79,19 @@ Không dùng Expo Go: dự án có module native (SQLite, RevenueCat, Skia nếu
 ## Kiểm thử chất lượng
 
 ```bash
-pnpm eval:rag        # chạy bộ 100 câu hỏi vàng, in ra bảng chỉ số
-pnpm eval:gate       # trả mã lỗi khác 0 nếu vi phạm ngưỡng trong SPEC §7
+pnpm eval:seed                 # tạo user eval + nạp 6 PDF docs/samples (chạy fetch.sh trước)
+pnpm eval:rag                  # bộ 100 câu hỏi vàng, in bảng chỉ số (EVAL_ONLY, EVAL_PACE_MS, EVAL_RESUME)
+pnpm eval:gate                 # như trên, exit 1 nếu vi phạm ngưỡng SPEC §7 — CI chạy ở job rag-gate
+bash scripts/grade-eval.sh     # 10 bài tự luận thật (eval/essays) — tiêu chí thoát G5
+bash scripts/maestro.sh .maestro/g2-ask.yaml            # luồng UI: hỏi đáp
+bash scripts/maestro.sh .maestro/g4-study-offline.yaml -e GENERATE=false   # ôn tập offline
+bash scripts/maestro.sh .maestro/g5-essay.yaml          # chấm tự luận
 ```
 
 `pnpm eval:gate` là điều kiện bắt buộc trước mỗi lần phát hành. Xem ngưỡng ở `docs/SPEC.md`.
+Trên free tier Gemini, mỗi lượt gate tốn ~200 lời gọi (500/ngày/model) — tối đa hai lượt một ngày;
+job CI `rag-gate` chỉ chạy khi push đụng `supabase/`, `eval/`, `services/ingest/` hoặc chạy tay
+(`gh workflow run ci.yml -f only=vi-001,en-003`).
 
 ## Trạng thái
 
