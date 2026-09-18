@@ -1,7 +1,7 @@
 # G7.7 — English parameters (see vi.yaml).
 appId: com.anchor.app
 env:
-  DOC: en_attention
+  DOC: "Attention Is All You Need"
   QUESTION: "What is the dimension d_model used in the base model?"
   EXPECT: "512"
   ESSAY: "The Transformer drops recurrence entirely and relies on self-attention. The base model uses d_model = 512 with 6 identical layers in both encoder and decoder, and multi-head attention with 8 heads. Positional encodings are added to the input embeddings so the model can use the order of the sequence. Training on WMT 2014 English-German took about 12 hours on 8 P100 GPUs."

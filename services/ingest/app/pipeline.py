@@ -72,7 +72,14 @@ async def accept_upload(user_id: str, title: str, pdf: bytes) -> Accepted:
     )
     if existing:
         d = existing[0]
-        return Accepted(d["id"], d["status"], d["page_count"], reused=True)
+        if d["status"] != "failed":
+            return Accepted(d["id"], d["status"], d["page_count"], reused=True)
+        # "Nạp lại" sau lỗi (vd hết hạn mức nhúng trong ngày): trước đây trả `reused` với status failed nên
+        # không bao giờ chạy lại. Dọn trang/chunk dở rồi cho pipeline chạy lại trên chính dòng đó.
+        await supabase.delete("chunks", document_id=f"eq.{d['id']}")
+        await supabase.delete("pages", document_id=f"eq.{d['id']}")
+        await _set_status(d["id"], "pending", error=None)
+        return Accepted(d["id"], "pending", d["page_count"], reused=False)
 
     doc = await asyncio.to_thread(open_pdf, pdf)
     page_count = doc.page_count

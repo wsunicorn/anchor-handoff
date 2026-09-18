@@ -3,9 +3,10 @@
 # còn `input text` ASCII đi qua Gboard tiếng Việt (bàn phím app khi locale vi) nên Telex chuyển thành có dấu.
 # Chuỗi ĐỐI CHIẾU (EXPECT) là Unicode thật; cần JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF-8 (scripts/store-shots.sh).
 #   maestro test -e FLOW=ask .maestro/store/vi.yaml
+# Dữ liệu: user store@anchor.local (scripts/store-seed.sh) — tên tài liệu thật, không phải tên file kỹ thuật của eval.
 appId: com.anchor.app
 env:
-  DOC: vi_decuong_ctu
+  DOC: "Đề cương Vật lý đại cương"
   QUESTION: "Hocj phaanf Vaatj lys ddaij cuwowng cos bao nhieeu tins chir vaf do booj moon naof phuj trachs?"
   EXPECT: "tín chỉ"
   ESSAY: "Hocj phaanf Vaatj lys ddaij cuwowng SP095 cos 2 tins chir, goomf 30 tieets lys thuyeets vaf 60 tieets tuwj hocj, do Booj moon Suw phamj Vaatj lys phuj trachs. DDieemr thi keets thucs hocj phaanf chieems 50% toongr ddieemr, conf ddieemr chuyeen caanf yeeu caauf duwj its nhaats 90% soos tieets. Baif kieemr tra giuwax kyf chieems 30% vaf baif taapj nhoms chieems 20%."
