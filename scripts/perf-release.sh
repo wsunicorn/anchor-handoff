@@ -8,7 +8,8 @@ cd "$(dirname "$0")/.."
 SERIAL=${1:?serial adb}
 export JAVA_HOME=${JAVA_HOME:-"D:\StudyDocument\BigData\CK\setup\Java"}
 # Bản release ký bằng debug keystore (android/app/build.gradle) — đủ để cài kiểm, không phải bản nộp store.
-pnpm expo run:android --variant release --device "$SERIAL" --no-bundler
+# Không tải sourcemap lên Sentry ở bản kiểm local (cần SENTRY_AUTH_TOKEN cho bản nộp store — TASKS #13).
+SENTRY_DISABLE_AUTO_UPLOAD=true pnpm expo run:android --variant release --device "$SERIAL" --no-bundler
 echo
 echo "== Cách đo (sau khi đăng nhập và mở màn tương ứng) =="
 echo "1) Reader 200 trang: mở tài liệu perf_200p, rồi:"

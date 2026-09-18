@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
+import { File, Paths } from 'expo-file-system';
 
 import type { Database } from '@/lib/database.types';
-import { IngestError, uploadPdf } from '@/lib/ingest';
+import { type Accepted, IngestError, uploadPdf } from '@/lib/ingest';
 import { supabase } from '@/lib/supabase';
 import { track } from '@/lib/telemetry';
 
@@ -61,6 +62,38 @@ export function useImportDocument() {
       if (!asset) return null;
       track('document_import_started');
       const accepted = await uploadPdf({ uri: asset.uri, name: asset.name });
+      track('document_import_accepted', { reused: accepted.reused, pages: accepted.page_count });
+      return accepted;
+    },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: documentsKey }),
+    onError: (e) => {
+      if (e instanceof IngestError) track('document_import_rejected', { code: e.code });
+    },
+  });
+}
+
+/**
+ * G7.5 — nhận PDF từ app khác ("Mở bằng Anchor", intent VIEW application/pdf): Android đưa `content://…`;
+ * chép vào cache (expo-file-system) rồi nạp như chọn từ picker. Tên lấy từ đuôi URI, mặc định "Tài liệu".
+ */
+export function useImportFromUri() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (uri: string): Promise<Accepted | null> => {
+      // URI của DocumentsProvider mã hoá cả đường dẫn trong đoạn cuối ("primary%3ADownload%2Fa.pdf")
+      // → giải mã trước rồi mới lấy phần sau dấu '/' hoặc ':' cuối cùng.
+      const name =
+        decodeURIComponent(uri.replace(/[?#].*$/, ''))
+          .split(/[/:]/)
+          .pop()
+          ?.trim() || 'Tài liệu.pdf';
+      const dest = new File(Paths.cache, `share-${Date.now()}.pdf`);
+      await new File(uri).copy(dest);
+      track('document_import_started', { source: 'intent' });
+      const accepted = await uploadPdf({
+        uri: dest.uri,
+        name: name.endsWith('.pdf') ? name : `${name}.pdf`,
+      });
       track('document_import_accepted', { reused: accepted.reused, pages: accepted.page_count });
       return accepted;
     },

@@ -10,6 +10,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { bootstrapSession, useSession } from '@/features/auth/session';
 import { configurePurchases } from '@/features/billing/api';
+import { listenShareIntent } from '@/features/library/shareIntent';
 import { wrapRoot } from '@/lib/telemetry';
 
 // Giữ splash cho tới khi biết đã đăng nhập hay chưa — tránh nháy màn đăng nhập rồi biến mất.
@@ -24,6 +25,7 @@ function RootLayout() {
   const session = useSession((s) => s.session);
 
   useEffect(() => bootstrapSession(), []);
+  useEffect(() => listenShareIntent(), []); // G7.5: PDF từ app khác
 
   // RevenueCat app_user_id = uuid Supabase để webhook ánh xạ (G6.1). Gọi ở đây, không ở session.ts,
   // để tránh vòng import session ↔ billing (làm bundle khởi tạo lỗi, màn trắng).

@@ -14,8 +14,10 @@ import {
   type DocumentRow,
   useDocuments,
   useImportDocument,
+  useImportFromUri,
   usePageProgress,
 } from '@/features/library/api';
+import { useShareIntent } from '@/features/library/shareIntent';
 import { IngestError } from '@/lib/ingest';
 
 /** Màn Thư viện (G1.6): danh sách tài liệu, nạp PDF, trạng thái xử lý và lỗi nói rõ việc gì. */
@@ -24,11 +26,23 @@ export default function LibraryScreen() {
   const router = useRouter();
   const docs = useDocuments();
   const importDoc = useImportDocument();
+  const importFromUri = useImportFromUri();
   const consent = useAiConsent();
   const ent = useEntitlement();
   // Người dùng bấm "Thêm" khi chưa đồng ý → mở màn đồng ý; đồng ý xong tự tiếp tục nạp.
   const pendingImport = useRef(false);
   const paywallShown = useRef(false);
+
+  // G7.5 — PDF mở từ app khác: app/+native-intent.ts cất URI vào store, Thư viện nạp khi đã đồng ý AI.
+  const pendingShare = useShareIntent((s) => s.pendingUri);
+  useFocusEffect(
+    useCallback(() => {
+      if (!pendingShare || consent !== true) return; // chưa đồng ý → giữ lại, focus sau chạy tiếp
+      const uri = useShareIntent.getState().take();
+      if (uri) importFromUri.mutate(uri);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pendingShare, consent]),
+  );
 
   // Chạy khi Thư viện lấy lại focus (đóng màn đồng ý / paywall). Thứ tự: paywall cứng sau onboarding
   // (ADR-0001 §5) một lần cho tài khoản chưa dùng thử/chưa có gói, rồi mới tiếp tục việc nạp đang chờ.
@@ -59,7 +73,7 @@ export default function LibraryScreen() {
     importDoc.mutate();
   };
 
-  const importError = importDoc.error;
+  const importError = importDoc.error ?? importFromUri.error;
   const errorText =
     importError instanceof IngestError
       ? t(`ingestError.${importError.code}` as 'ingestError.unknown', { limit: importError.limit })
@@ -81,6 +95,9 @@ export default function LibraryScreen() {
         <FlashList
           data={docs.data}
           keyExtractor={(d) => d.id}
+          // FlashList v2 mặc định giữ nguyên vị trí nhìn khi thêm phần tử ở đầu → tài liệu vừa nạp bị
+          // đẩy khuất trên viewport (thấy trên release 2026-09-18). Đang ở gần đầu thì cuộn theo.
+          maintainVisibleContentPosition={{ autoscrollToTopThreshold: 200 }}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 96 }}
           renderItem={({ item }) => (
             <DocumentCard
