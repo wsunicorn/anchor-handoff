@@ -42,7 +42,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.117.0 # ghim = devDependency `supabase`; `latest` hỏi GitHub API không token → "rate limit exceeded" (18/9)
       - run: supabase start -x logflare,vector,imgproxy,supavisor,realtime,studio,edge-runtime
       - run: pnpm test:rls
       - if: always()
@@ -122,7 +122,7 @@ jobs:
       - if: steps.relevant.outputs.run == 'true'
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.117.0 # ghim = devDependency `supabase`; `latest` hỏi GitHub API không token → "rate limit exceeded" (18/9)
       - if: steps.relevant.outputs.run == 'true'
         run: supabase start -x logflare,vector,imgproxy,supavisor,realtime,studio,edge-runtime
       - if: steps.relevant.outputs.run == 'true'
