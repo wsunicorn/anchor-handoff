@@ -1,0 +1,16 @@
+# G7.4 — tới màn danh sách mọi thẻ (cần ≥ 500 thẻ trong SQLite: xem scripts/perf-scroll.sh).
+appId: com.anchor.app
+---
+- runFlow: ../a11y/_open.yaml
+- tapOn:
+    text: "Ôn tập|Study"
+- extendedWaitUntil:
+    visible:
+      id: "study-all-cards"
+    timeout: 30000
+- tapOn:
+    id: "study-all-cards"
+- extendedWaitUntil:
+    visible:
+      id: "cards-list"
+    timeout: 30000
