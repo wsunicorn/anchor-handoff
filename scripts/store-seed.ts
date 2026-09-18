@@ -18,6 +18,8 @@ const PASSWORD = 'store-pass-anchor-1';
 const DOCS: { file: string; title: string }[] = [
   { file: 'en_attention.pdf', title: 'Attention Is All You Need' },
   { file: 'vi_decuong_ctu.pdf', title: 'Đề cương Vật lý đại cương' },
+  { file: 'slides_mit.pdf', title: 'Mechanisms of Diffusion II — Ionic Crystals' },
+  { file: 'vi_decuong_hcmute.pdf', title: 'Đề cương Vật lý 1 (PHYS130902)' },
 ];
 
 function env(name: string): string {

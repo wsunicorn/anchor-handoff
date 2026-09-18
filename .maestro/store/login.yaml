@@ -1,0 +1,31 @@
+# Đăng nhập trên BẢN RELEASE (không có màn chọn server của dev client) bằng OTP qua Mailpit — như ../login.yaml.
+#   maestro test -e EMAIL=store@anchor.local .maestro/store/login.yaml
+appId: com.anchor.app
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "signin-email"
+    timeout: 60000
+- tapOn:
+    id: "signin-email"
+- inputText: "${EMAIL}"
+- tapOn:
+    id: "signin-send"
+- extendedWaitUntil:
+    visible:
+      id: "signin-code"
+    timeout: 15000
+- runScript:
+    file: ../otp.js
+    env:
+      EMAIL: ${EMAIL}
+- tapOn:
+    id: "signin-code"
+- inputText: "${output.otp}"
+- tapOn:
+    id: "signin-verify"
+- extendedWaitUntil:
+    visible: "Thư viện|Library|Đồng ý và tiếp tục|Agree and continue"
+    timeout: 60000
