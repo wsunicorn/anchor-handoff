@@ -1,0 +1,56 @@
+# Luồng chính G6: tài khoản mới → bấm Thêm tài liệu → màn đồng ý → đồng ý → paywall cứng hiện ra →
+# bắt đầu dùng thử 21 ngày (không cần thẻ) → về Thư viện → tab Tôi hiện gói pro + số ngày dùng thử.
+# Mua gói thật (sandbox) cần khoá RevenueCat + sản phẩm Play (TASKS #9) — flow này không mua.
+# Chạy: bash scripts/maestro.sh .maestro/g6-paywall.yaml -e EMAIL=trial-<số>@anchor.local
+appId: com.anchor.app
+env:
+  DOC: vi_decuong_ctu
+---
+- runFlow: login.yaml
+- extendedWaitUntil:
+    visible: "Thư viện|Library"
+    timeout: 20000
+- tapOn:
+    text: "Thêm tài liệu|Add document"
+- extendedWaitUntil:
+    visible: "Trước khi dùng tính năng AI|Before you use AI features"
+    timeout: 15000
+- takeScreenshot: G6-consent
+- tapOn:
+    text: "Đồng ý và tiếp tục|Agree and continue"
+# Đồng ý xong, Thư viện lấy lại focus → paywall cứng (tài khoản chưa dùng thử).
+- extendedWaitUntil:
+    visible:
+      id: "paywall-title"
+    timeout: 15000
+- assertVisible:
+    id: "plan-yearly"
+- takeScreenshot: G6-paywall
+- tapOn:
+    id: "paywall-trial"
+# Sau dùng thử, việc nạp đang chờ tiếp tục (mở bộ chọn file) → huỷ bằng BACK.
+- extendedWaitUntil:
+    visible: "Thư viện|Library"
+    timeout: 15000
+    optional: true
+- back
+- tapOn:
+    text: "Tôi|Me"
+- extendedWaitUntil:
+    visible:
+      id: "me-tier"
+    timeout: 15000
+- assertVisible:
+    text: ".*pro.*"
+- takeScreenshot: G6-me-trial
+# Mở lại paywall từ tab Tôi: không còn nút dùng thử, có "Tiếp tục miễn phí" và "Khôi phục giao dịch".
+- tapOn:
+    id: "me-paywall"
+- extendedWaitUntil:
+    visible:
+      id: "paywall-trial-state"
+    timeout: 10000
+- assertNotVisible:
+    id: "paywall-trial"
+- assertVisible: "Khôi phục giao dịch|Restore purchases"
+- takeScreenshot: G6-paywall-trial-active

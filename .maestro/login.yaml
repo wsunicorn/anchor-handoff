@@ -5,9 +5,10 @@ appId: com.anchor.app
 # Xoá trạng thái để luôn đi qua đăng nhập. Dev client mở màn chọn server → chạm vào Metro (cổng 8081).
 - launchApp:
     clearState: true
+# Màn chọn server của dev client (có hay không có server tự dò đều được — ta mở bằng deep link).
 - extendedWaitUntil:
-    visible: "http://.*:8081"
-    timeout: 20000
+    visible: "DEVELOPMENT SERVERS|Development Build"
+    timeout: 30000
 # Nạp bundle qua 127.0.0.1 (adb reverse 8081) thay vì IP LAN mà dev client tự dò: chế độ máy bay
 # không cắt loopback → LogBox "mất Metro" không đè lên nút khi kiểm offline.
 - openLink: "exp+anchor://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081"
@@ -15,7 +16,7 @@ appId: com.anchor.app
 # (đè lên màn đăng nhập) → chờ tới khi thấy hoặc hướng dẫn hoặc màn đăng nhập rồi mới đóng hướng dẫn.
 - extendedWaitUntil:
     visible: "Continue|Sign in with email|Đăng nhập bằng email"
-    timeout: 90000
+    timeout: 180000
 - tapOn:
     text: "Continue"
     optional: true
