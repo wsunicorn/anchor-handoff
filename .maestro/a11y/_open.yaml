@@ -1,0 +1,24 @@
+# Subflow: mở app (giữ phiên đăng nhập) và về Thư viện.
+appId: com.anchor.app
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Thư viện|Library|DEVELOPMENT SERVERS|Development Build|Continue"
+    timeout: 150000
+- runFlow:
+    when:
+      visible: "DEVELOPMENT SERVERS|Development Build"
+    commands:
+      - openLink: "exp+anchor://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081"
+- tapOn:
+    text: "Continue"
+    optional: true
+- tapOn:
+    text: "Close"
+    optional: true
+- extendedWaitUntil:
+    visible: "Thư viện|Library"
+    timeout: 120000
+- tapOn:
+    text: "Thư viện|Library"
+    optional: true

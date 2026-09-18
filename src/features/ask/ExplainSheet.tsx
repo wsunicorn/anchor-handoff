@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 
 import type { VerifiedParagraph } from '@/features/ask/types';
 
@@ -15,14 +16,24 @@ type Props = {
  */
 export function ExplainSheet({ paragraph, onClose, onOpenCitation }: Props) {
   const { t } = useTranslation();
+  // DESIGN §6: "giảm chuyển động" → thay trượt bằng mờ dần.
+  const reduced = useReducedMotion();
   return (
-    <Modal visible={paragraph !== null} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={paragraph !== null}
+      transparent
+      animationType={reduced ? 'fade' : 'slide'}
+      onRequestClose={onClose}
+    >
       <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('common.close')}
         className="flex-1 justify-end bg-ink/40"
         onPress={onClose}
-        accessibilityLabel={t('common.close')}
       >
+        {/* Chặn chạm xuyên xuống lớp đóng; không phải nút với TalkBack. */}
         <Pressable
+          accessibilityRole="none"
           onPress={() => {}}
           className="rounded-t-sheet bg-surface px-screen pb-xxl pt-lg shadow-lg"
         >

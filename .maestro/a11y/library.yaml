@@ -1,0 +1,4 @@
+appId: com.anchor.app
+---
+- runFlow: _open.yaml
+- assertVisible: "Thư viện|Library"

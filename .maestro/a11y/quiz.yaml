@@ -1,0 +1,15 @@
+appId: com.anchor.app
+env:
+  DOC: vi_decuong_ctu
+---
+- runFlow: _open.yaml
+- tapOn:
+    text: "${DOC}[.] .*"
+- extendedWaitUntil:
+    visible:
+      id: "reader-quiz"
+    timeout: 20000
+- tapOn:
+    id: "reader-quiz"
+- assertVisible:
+    id: "quiz-submit"

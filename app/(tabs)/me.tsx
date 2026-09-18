@@ -1,15 +1,22 @@
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import { Alert, Linking, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { ErrorState } from '@/components/ScreenState';
 import { signOut, useSession } from '@/features/auth/session';
 import { trialDaysLeft, useEntitlement } from '@/features/billing/api';
-import { useProfile, useSetAiConsent } from '@/features/consent/api';
+import { deleteAccount, useProfile, useSetAiConsent } from '@/features/consent/api';
 
-/** Tôi: tài khoản, gói, và công tắc tính năng AI (SPEC §9: tắt được, không chôn trong cài đặt). */
+/** Địa chỉ công khai của chính sách/điều khoản (docs/legal). Đổi khi có domain thật (TASKS #11). */
+const LEGAL_URL = {
+  privacy: 'https://github.com/wsunicorn/anchor-handoff/blob/main/docs/legal/privacy.vi.md',
+  terms: 'https://github.com/wsunicorn/anchor-handoff/blob/main/docs/legal/terms.vi.md',
+} as const;
+
+/** Tôi: tài khoản, gói, công tắc tính năng AI (SPEC §9), riêng tư/điều khoản và xoá tài khoản (G7.6). */
 export default function MeScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -17,6 +24,26 @@ export default function MeScreen() {
   const profile = useProfile();
   const setConsent = useSetAiConsent();
   const ent = useEntitlement();
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string>();
+
+  // G7.6 — xác nhận hai bước bằng hộp thoại hệ thống; xoá xong đăng xuất, root layout tự về màn đăng nhập.
+  const confirmDelete = () =>
+    Alert.alert(t('me.deleteTitle'), t('me.deleteBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('me.deleteConfirm'),
+        style: 'destructive',
+        onPress: () => {
+          setDeleting(true);
+          setDeleteError(undefined);
+          deleteAccount().catch(() => {
+            setDeleteError(t('me.deleteFailed'));
+            setDeleting(false);
+          });
+        },
+      },
+    ]);
   const aiOn = profile.data?.ai_consent_at !== null && profile.data !== undefined;
 
   return (
@@ -69,6 +96,40 @@ export default function MeScreen() {
               />
             )}
           </View>
+        </View>
+
+        <View className="mt-block rounded-card border border-rule bg-surface p-lg">
+          <Text className="type-label text-ink-muted">{t('me.legal')}</Text>
+          <View className="mt-xs flex-row gap-lg">
+            <Pressable
+              accessibilityRole="link"
+              onPress={() => void Linking.openURL(LEGAL_URL.privacy)}
+              className="min-h-[44px] justify-center"
+            >
+              <Text className="type-ui text-ink underline">{t('me.privacy')}</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="link"
+              onPress={() => void Linking.openURL(LEGAL_URL.terms)}
+              className="min-h-[44px] justify-center"
+            >
+              <Text className="type-ui text-ink underline">{t('me.terms')}</Text>
+            </Pressable>
+          </View>
+          <View className="mt-lg">
+            <Button
+              label={deleting ? t('me.deleting') : t('me.deleteAccount')}
+              variant="secondary"
+              busy={deleting}
+              testID="me-delete-account"
+              onPress={confirmDelete}
+            />
+          </View>
+          {deleteError ? (
+            <Text className="type-label text-unsupported mt-xs" accessibilityLiveRegion="polite">
+              {deleteError}
+            </Text>
+          ) : null}
         </View>
       </View>
     </SafeAreaView>

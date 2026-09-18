@@ -49,3 +49,23 @@ export function useSetAiConsent() {
     onSuccess: () => void qc.invalidateQueries({ queryKey: profileKey }),
   });
 }
+
+/**
+ * G7.6 — xoá tài khoản thật: Edge Function xoá file Storage rồi auth.users (cascade toàn bộ), sau đó đăng
+ * xuất cục bộ. Không có đường quay lại; UI phải hỏi xác nhận trước.
+ */
+export async function deleteAccount(): Promise<void> {
+  const { data } = await supabase.auth.getSession();
+  const jwt = data.session?.access_token;
+  if (!jwt) throw new Error('unauthorized');
+  const res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/delete-account`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+      apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+    },
+  });
+  if (!res.ok) throw new Error(`delete_account_${res.status}`);
+  track('account_deleted');
+  await supabase.auth.signOut();
+}

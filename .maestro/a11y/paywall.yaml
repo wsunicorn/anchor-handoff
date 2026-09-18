@@ -1,0 +1,9 @@
+appId: com.anchor.app
+---
+- runFlow: _open.yaml
+- tapOn:
+    text: "Tôi|Me"
+- tapOn:
+    id: "me-paywall"
+- assertVisible:
+    id: "paywall-title"

@@ -3,6 +3,8 @@
  *   1. Không hex màu rời ngoài src/theme/tokens.ts (màu chỉ từ token).
  *   2. Không chữ hiển thị hardcode trong JSX (mọi chuỗi qua t('…')): JsxText có chữ cái, hoặc
  *      literal chuỗi làm con trực tiếp của <Text>.
+ *   3. Tiếp cận (G7.3): mọi <Pressable> có accessibilityRole; không có <Text> con thì phải có
+ *      accessibilityLabel (nút chỉ có icon → TalkBack đọc được).
  * Bỏ qua: comment, chuỗi chỉ có ký hiệu/số (·, /, %, 1/2…), className, testID, accessibilityRole.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -26,7 +28,7 @@ function walk(dir: string, out: string[] = []): string[] {
 const HAS_LETTER = /\p{L}/u;
 const HEX = /#[0-9a-fA-F]{3,8}\b/;
 
-type Issue = { file: string; line: number; kind: 'hex' | 'raw-text'; text: string };
+type Issue = { file: string; line: number; kind: 'hex' | 'raw-text' | 'a11y'; text: string };
 const issues: Issue[] = [];
 
 for (const dir of DIRS) {
@@ -64,6 +66,32 @@ for (const dir of DIRS) {
           });
         }
       }
+      // 3. Pressable: role + (label hoặc Text con).
+      if (
+        (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) &&
+        ts.isIdentifier(ts.isJsxElement(node) ? node.openingElement.tagName : node.tagName) &&
+        (ts.isJsxElement(node) ? node.openingElement.tagName : node.tagName).getText() ===
+          'Pressable'
+      ) {
+        const attrs = (ts.isJsxElement(node) ? node.openingElement : node).attributes.properties
+          .filter(ts.isJsxAttribute)
+          .map((a) => a.name.getText());
+        const hasText = node.getText().includes('<Text');
+        if (!attrs.includes('accessibilityRole'))
+          issues.push({
+            file: rel,
+            line: lineOf(node),
+            kind: 'a11y',
+            text: 'Pressable thiếu accessibilityRole',
+          });
+        if (!attrs.includes('accessibilityLabel') && !hasText)
+          issues.push({
+            file: rel,
+            line: lineOf(node),
+            kind: 'a11y',
+            text: 'Pressable chỉ có icon mà thiếu accessibilityLabel',
+          });
+      }
       ts.forEachChild(node, visit);
     };
     visit(sf);
@@ -75,4 +103,6 @@ if (issues.length) {
   console.error(`\ncheck-design: ${issues.length} vi phạm DESIGN.md (hex rời / chữ hardcode).`);
   process.exit(1);
 }
-console.log('check-design: OK — không hex rời, không chữ hardcode trong app/ và src/.');
+console.log(
+  'check-design: OK — không hex rời, không chữ hardcode, Pressable có role/label trong app/ và src/.',
+);

@@ -28,14 +28,14 @@ Chỉ dùng qua `src/theme/tokens.ts`. Không hex rời trong component.
 | `surface` | `#FFFFFF` | Thẻ, sheet, ảnh trang |
 | `rule` | `#C9D2DC` | Đường kẻ, viền, lề |
 | `verified` | `#1F6B4F` | Nhãn có căn cứ |
-| `inferred` | `#A66A00` | Nhãn suy luận |
+| `inferred` | `#8F5B00` | Nhãn suy luận (đổi 2026-09-18 từ #A66A00 để đạt AA 4,5:1 trên paper) |
 | `unsupported` | `#9B2F45` | Nhãn không có trong tài liệu, lỗi |
 | `highlighter` | `#F6E96B` | Vệt highlight, luôn ở alpha 35% |
 
 ### Tối
 
 `ink` → `#E7ECF3`, `paper` → `#0F1622`, `surface` → `#16202E`, `rule` → `#2C3A4D`,
-ba màu nhãn nâng sáng: `#3F9E77`, `#D4941F`, `#D4607A`. Highlighter giữ nguyên sắc, hạ
+ba màu nhãn nâng sáng: `#3F9E77`, `#D4941F`, `#DC6E88` (đổi 2026-09-18 từ #D4607A, AA trên surface tối). Highlighter giữ nguyên sắc, hạ
 alpha xuống 28%.
 
 Ba màu nhãn **chỉ** dùng cho trạng thái kiểm chứng. Không dùng xanh `verified` cho nút

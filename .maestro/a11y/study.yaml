@@ -1,0 +1,6 @@
+appId: com.anchor.app
+---
+- runFlow: _open.yaml
+- tapOn:
+    text: "Ôn tập|Study"
+- assertVisible: "Ôn tập|Study"

@@ -11,7 +11,7 @@ export const palette = {
     surface: '#FFFFFF',
     rule: '#C9D2DC',
     verified: '#1F6B4F',
-    inferred: '#A66A00',
+    inferred: '#8F5B00', // 18/9: từ #A66A00 (4,1:1) lên 5,3:1 trên paper — AA cho chữ nhãn 13pt
     unsupported: '#9B2F45',
     highlighter: '#F6E96B',
     highlighterAlpha: 0.35,
@@ -24,7 +24,7 @@ export const palette = {
     rule: '#2C3A4D',
     verified: '#3F9E77',
     inferred: '#D4941F',
-    unsupported: '#D4607A',
+    unsupported: '#DC6E88', // 18/9: từ #D4607A (4,5:1 trên surface) lên 5,2:1
     highlighter: '#F6E96B',
     highlighterAlpha: 0.28,
   },
