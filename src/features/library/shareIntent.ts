@@ -2,8 +2,9 @@ import { Linking } from 'react-native';
 import { create } from 'zustand';
 
 /**
- * G7.5 — PDF tới từ app khác (intent VIEW/SEND trên Android, sau này Share Extension iOS).
- * URI được cất vào đây; Thư viện lấy ra (`take`) và nạp khi đã có đồng ý AI.
+ * G7.5 — PDF tới từ app khác. Android: intent VIEW `content://…` (app.json `intentFilters`). iOS: "Open in Anchor"
+ * qua `CFBundleDocumentTypes` (app.json) — hệ thống chép file vào Inbox rồi mở app với `file://…`; chưa kiểm trên
+ * iPhone. URI được cất vào đây; Thư viện lấy ra (`take`) và nạp khi đã có đồng ý AI.
  *
  * Hai nguồn cùng đổ vào: `app/+native-intent.ts` (Expo Router) và `listenShareIntent()` gọi thẳng
  * `Linking.getInitialURL()`. Cần nguồn thứ hai vì Expo Router chỉ chờ `getInitialURL` 150 ms khi

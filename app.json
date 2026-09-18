@@ -10,7 +10,17 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anchor.app"
+      "bundleIdentifier": "com.anchor.app",
+      "infoPlist": {
+        "CFBundleDocumentTypes": [
+          {
+            "CFBundleTypeName": "PDF",
+            "LSHandlerRank": "Alternate",
+            "LSItemContentTypes": ["com.adobe.pdf"]
+          }
+        ],
+        "LSSupportsOpeningDocumentsInPlace": false
+      }
     },
     "android": {
       "package": "com.anchor.app",
