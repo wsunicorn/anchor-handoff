@@ -17,6 +17,7 @@ import Animated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
+import { ErrorState, LoadingState } from '@/components/ScreenState';
 import { gradeCard, type QueueItem, quizDocumentId, useQueue, useSync } from '@/features/study/api';
 import { type FsrsState, type Grade4, preview } from '@/features/study/scheduler';
 import { palette } from '@/theme/tokens';
@@ -170,7 +171,11 @@ export default function SessionScreen() {
         </Text>
       </View>
 
-      {finished || (items && !current) ? (
+      {queue.isPending ? (
+        <LoadingState />
+      ) : queue.error ? (
+        <ErrorState onRetry={() => void queue.refetch()} />
+      ) : finished || (items && !current) ? (
         <View className="flex-1 justify-center gap-md px-screen">
           <Text className="type-sectionTitle text-ink" testID="session-finished">
             {t('study.session.finished')}

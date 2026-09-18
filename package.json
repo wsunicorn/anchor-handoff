@@ -9,6 +9,7 @@
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.node.json",
     "check-i18n": "tsx scripts/check-i18n.ts",
+    "check-design": "tsx scripts/check-design.ts",
     "test": "vitest run",
     "test:rls": "bash scripts/test-rls.sh",
     "db:start": "supabase start -x logflare,vector,imgproxy,supavisor,realtime",

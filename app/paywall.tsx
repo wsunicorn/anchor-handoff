@@ -6,6 +6,7 @@ import type { PurchasesPackage } from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
+import { ErrorState, LoadingState } from '@/components/ScreenState';
 import {
   PurchaseFlowError,
   purchasesConfigured,
@@ -91,105 +92,111 @@ export default function PaywallScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-paper">
-      <ScrollView contentContainerClassName="px-screen py-xxl gap-lg">
-        <Text className="type-screenTitle text-ink" testID="paywall-title">
-          {t('paywall.title')}
-        </Text>
-        <Text className="type-docBody text-ink">{t('paywall.subtitle')}</Text>
-
-        {isPro ? (
-          <View className="rounded-card border border-rule bg-surface p-lg">
-            <Text className="type-uiMedium text-verified">{t('paywall.proActive')}</Text>
-          </View>
-        ) : canStartTrial ? (
-          <View className="gap-sm rounded-card border border-rule bg-surface p-lg">
-            <Text className="type-ui text-ink-muted">
-              {t('paywall.trialBody', { days: TRIAL_DAYS })}
-            </Text>
-            <Button
-              label={t('paywall.trial', { days: TRIAL_DAYS })}
-              busy={startTrial.isPending}
-              testID="paywall-trial"
-              onPress={() => startTrial.mutate(undefined, { onSuccess: () => router.back() })}
-            />
-          </View>
-        ) : (
-          <Text className="type-uiMedium text-ink-muted" testID="paywall-trial-state">
-            {trialLeft > 0
-              ? t('paywall.trialActive', { days: trialLeft })
-              : t('paywall.trialEnded')}
+      {ent.isPending ? (
+        <LoadingState />
+      ) : ent.error ? (
+        <ErrorState onRetry={() => void ent.refetch()} />
+      ) : (
+        <ScrollView contentContainerClassName="px-screen py-xxl gap-lg">
+          <Text className="type-screenTitle text-ink" testID="paywall-title">
+            {t('paywall.title')}
           </Text>
-        )}
+          <Text className="type-docBody text-ink">{t('paywall.subtitle')}</Text>
 
-        {!isPro ? (
-          <View className="gap-sm">
-            {PLANS.map((plan) => (
-              <Pressable
-                key={plan.key}
-                accessibilityRole="button"
-                accessibilityLabel={t(`paywall.${plan.key}`)}
-                testID={`plan-${plan.key}`}
-                disabled={purchase.isPending}
-                onPress={() => buy(plan)}
-                className={`flex-row items-center rounded-card border p-lg active:opacity-80 ${
-                  plan.key === 'yearly' ? 'border-ink bg-surface' : 'border-rule bg-surface'
-                }`}
-              >
-                <View className="flex-1 gap-xs">
-                  <View className="flex-row items-center gap-sm">
-                    <Text className="type-uiMedium text-ink">{t(`paywall.${plan.key}`)}</Text>
-                    {plan.key === 'yearly' ? (
-                      <Text className="type-label rounded-card bg-ink px-sm text-paper">
-                        {t('paywall.yearlyBadge')}
-                      </Text>
-                    ) : null}
+          {isPro ? (
+            <View className="rounded-card border border-rule bg-surface p-lg">
+              <Text className="type-uiMedium text-verified">{t('paywall.proActive')}</Text>
+            </View>
+          ) : canStartTrial ? (
+            <View className="gap-sm rounded-card border border-rule bg-surface p-lg">
+              <Text className="type-ui text-ink-muted">
+                {t('paywall.trialBody', { days: TRIAL_DAYS })}
+              </Text>
+              <Button
+                label={t('paywall.trial', { days: TRIAL_DAYS })}
+                busy={startTrial.isPending}
+                testID="paywall-trial"
+                onPress={() => startTrial.mutate(undefined, { onSuccess: () => router.back() })}
+              />
+            </View>
+          ) : (
+            <Text className="type-uiMedium text-ink-muted" testID="paywall-trial-state">
+              {trialLeft > 0
+                ? t('paywall.trialActive', { days: trialLeft })
+                : t('paywall.trialEnded')}
+            </Text>
+          )}
+
+          {!isPro ? (
+            <View className="gap-sm">
+              {PLANS.map((plan) => (
+                <Pressable
+                  key={plan.key}
+                  accessibilityRole="button"
+                  accessibilityLabel={t(`paywall.${plan.key}`)}
+                  testID={`plan-${plan.key}`}
+                  disabled={purchase.isPending}
+                  onPress={() => buy(plan)}
+                  className={`flex-row items-center rounded-card border p-lg active:opacity-80 ${
+                    plan.key === 'yearly' ? 'border-ink bg-surface' : 'border-rule bg-surface'
+                  }`}
+                >
+                  <View className="flex-1 gap-xs">
+                    <View className="flex-row items-center gap-sm">
+                      <Text className="type-uiMedium text-ink">{t(`paywall.${plan.key}`)}</Text>
+                      {plan.key === 'yearly' ? (
+                        <Text className="type-label rounded-card bg-ink px-sm text-paper">
+                          {t('paywall.yearlyBadge')}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <Text className="type-label text-ink-muted">{priceLabel(plan)}</Text>
                   </View>
-                  <Text className="type-label text-ink-muted">{priceLabel(plan)}</Text>
-                </View>
-                <Text className="type-uiMedium text-ink">
-                  {purchase.isPending ? t('paywall.buying') : t('paywall.buy')}
-                </Text>
-              </Pressable>
-            ))}
-            {!purchasesConfigured ? (
-              <Text className="type-label text-ink-muted">{t('paywall.notConfigured')}</Text>
-            ) : null}
-          </View>
-        ) : null}
-
-        {notice ? (
-          <Text className="type-label text-unsupported" accessibilityLiveRegion="polite">
-            {notice}
-          </Text>
-        ) : null}
-
-        <View className="gap-sm">
-          {!isPro && !canStartTrial ? (
-            <Button
-              label={t('paywall.continueFree')}
-              variant="secondary"
-              testID="paywall-continue-free"
-              onPress={() => router.back()}
-            />
+                  <Text className="type-uiMedium text-ink">
+                    {purchase.isPending ? t('paywall.buying') : t('paywall.buy')}
+                  </Text>
+                </Pressable>
+              ))}
+              {!purchasesConfigured ? (
+                <Text className="type-label text-ink-muted">{t('paywall.notConfigured')}</Text>
+              ) : null}
+            </View>
           ) : null}
-          <Pressable
-            accessibilityRole="button"
-            onPress={() =>
-              restore.mutate(undefined, {
-                onSuccess: (ok) =>
-                  setNotice(ok ? t('paywall.restoredOk') : t('paywall.restoredNone')),
-                onError,
-              })
-            }
-            className="min-h-[44px] items-center justify-center"
-          >
-            <Text className="type-label text-ink underline">
-              {restore.isPending ? t('paywall.restoring') : t('paywall.restore')}
+
+          {notice ? (
+            <Text className="type-label text-unsupported" accessibilityLiveRegion="polite">
+              {notice}
             </Text>
-          </Pressable>
-          <Text className="type-label text-ink-muted text-center">{t('paywall.terms')}</Text>
-        </View>
-      </ScrollView>
+          ) : null}
+
+          <View className="gap-sm">
+            {!isPro && !canStartTrial ? (
+              <Button
+                label={t('paywall.continueFree')}
+                variant="secondary"
+                testID="paywall-continue-free"
+                onPress={() => router.back()}
+              />
+            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              onPress={() =>
+                restore.mutate(undefined, {
+                  onSuccess: (ok) =>
+                    setNotice(ok ? t('paywall.restoredOk') : t('paywall.restoredNone')),
+                  onError,
+                })
+              }
+              className="min-h-[44px] items-center justify-center"
+            >
+              <Text className="type-label text-ink underline">
+                {restore.isPending ? t('paywall.restoring') : t('paywall.restore')}
+              </Text>
+            </Pressable>
+            <Text className="type-label text-ink-muted text-center">{t('paywall.terms')}</Text>
+          </View>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }

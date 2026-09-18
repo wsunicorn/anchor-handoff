@@ -26,6 +26,7 @@ jobs:
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm check-i18n
+      - run: pnpm check-design
 
   # Cách ly dữ liệu giữa tài khoản (G0.7). Chạy Supabase thật trong CI: RLS sai là lỗi
   # bảo mật, không được chỉ tin vào máy dev.

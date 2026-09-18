@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ErrorState } from '@/components/ScreenState';
 import { useChunks } from '@/features/reader/api';
 import { useThemeColors } from '@/theme/useThemeColors';
 
@@ -36,6 +37,8 @@ export default function ChunksScreen() {
 
       {chunks.isPending ? (
         <ActivityIndicator className="mt-xxl text-ink" />
+      ) : chunks.error ? (
+        <ErrorState onRetry={() => void chunks.refetch()} />
       ) : (
         <FlashList
           data={chunks.data ?? []}

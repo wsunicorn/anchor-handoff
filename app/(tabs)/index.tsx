@@ -6,6 +6,7 @@ import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
+import { ErrorState } from '@/components/ScreenState';
 import { useEntitlement } from '@/features/billing/api';
 import { useAiConsent } from '@/features/consent/api';
 import {
@@ -74,6 +75,8 @@ export default function LibraryScreen() {
 
       {docs.isPending ? (
         <ActivityIndicator className="mt-xxl text-ink" />
+      ) : docs.error ? (
+        <ErrorState onRetry={() => void docs.refetch()} />
       ) : docs.data && docs.data.length > 0 ? (
         <FlashList
           data={docs.data}

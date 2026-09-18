@@ -5,6 +5,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
+import { ErrorState, LoadingState } from '@/components/ScreenState';
 import { useProgress, useQuizzes, useSync } from '@/features/study/api';
 
 /**
@@ -34,6 +35,8 @@ export default function StudyScreen() {
         <Text className="type-screenTitle text-ink">{t('study.title')}</Text>
         {offline ? <Text className="type-label text-ink-muted">{t('study.offline')}</Text> : null}
 
+        {quizzes.isPending ? <LoadingState /> : null}
+        {quizzes.error ? <ErrorState onRetry={() => void quizzes.refetch()} /> : null}
         {quizzes.data && quizzes.data.length === 0 ? (
           <View className="flex-1 justify-center py-xxl">
             <Text className="type-docBody text-ink-muted text-center">{t('study.empty')}</Text>

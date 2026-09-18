@@ -179,6 +179,9 @@ export default {
     noTraining: 'Your data is not used to train models.',
   },
   common: {
+    loading: 'Loading…',
+    loadFailed: 'Could not load. Check your connection and try again.',
+    retry: 'Retry',
     cancel: 'Cancel',
     delete: 'Delete',
     back: 'Back',

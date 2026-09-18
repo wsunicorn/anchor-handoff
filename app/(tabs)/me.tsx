@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
+import { ErrorState } from '@/components/ScreenState';
 import { signOut, useSession } from '@/features/auth/session';
 import { trialDaysLeft, useEntitlement } from '@/features/billing/api';
 import { useProfile, useSetAiConsent } from '@/features/consent/api';
@@ -22,6 +23,7 @@ export default function MeScreen() {
     <SafeAreaView className="flex-1 bg-paper" edges={['top']}>
       <View className="px-screen pt-lg">
         <Text className="type-screenTitle text-ink">{t('me.title')}</Text>
+        {profile.error ? <ErrorState onRetry={() => void profile.refetch()} /> : null}
 
         <View className="mt-block rounded-card border border-rule bg-surface p-lg">
           <Text className="type-label text-ink-muted">{t('me.account')}</Text>

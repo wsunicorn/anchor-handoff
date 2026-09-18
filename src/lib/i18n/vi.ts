@@ -179,6 +179,9 @@ export default {
     noTraining: 'Dữ liệu không dùng để huấn luyện mô hình.',
   },
   common: {
+    loading: 'Đang tải…',
+    loadFailed: 'Chưa tải được. Kiểm tra mạng rồi thử lại.',
+    retry: 'Thử lại',
     cancel: 'Huỷ',
     delete: 'Xoá',
     back: 'Quay lại',

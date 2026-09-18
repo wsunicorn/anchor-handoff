@@ -7,6 +7,7 @@ import { Pressable, ScrollView, Text, useColorScheme, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
+import { ErrorState, LoadingState } from '@/components/ScreenState';
 import { TextField } from '@/components/TextField';
 import { StudyError, useGenerateQuiz } from '@/features/study/api';
 import { supabase } from '@/lib/supabase';
@@ -87,70 +88,76 @@ export default function GenerateQuizScreen() {
         <View className="min-w-[44px]" />
       </View>
 
-      <ScrollView
-        contentContainerClassName="px-screen py-lg gap-lg"
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text className="type-sectionTitle text-ink">{doc.data?.title ?? ''}</Text>
-        <Text className="type-ui text-ink-muted">{t('study.generate.body')}</Text>
+      {doc.isPending ? (
+        <LoadingState />
+      ) : doc.error ? (
+        <ErrorState onRetry={() => void doc.refetch()} />
+      ) : (
+        <ScrollView
+          contentContainerClassName="px-screen py-lg gap-lg"
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text className="type-sectionTitle text-ink">{doc.data?.title ?? ''}</Text>
+          <Text className="type-ui text-ink-muted">{t('study.generate.body')}</Text>
 
-        {gen.data ? (
-          <View className="gap-md rounded-card border border-rule bg-surface p-lg">
-            <Text className="type-uiMedium text-ink">
-              {t('study.generate.done', { kept: gen.data.questions.length, dropped })}
-            </Text>
-            <Button
-              label={t('study.generate.start')}
-              testID="quiz-start"
-              onPress={() =>
-                router.replace({ pathname: '/study/session', params: { quiz: gen.data.quiz_id } })
-              }
-            />
-          </View>
-        ) : (
-          <View className="gap-md">
-            <View className="flex-row gap-md">
-              <View className="flex-1">
-                <TextField
-                  label={t('study.generate.from')}
-                  value={from}
-                  onChangeText={(v) => setFrom(v.replace(/\D/g, ''))}
-                  keyboardType="number-pad"
-                  testID="quiz-from"
-                  editable={!gen.isPending}
-                />
-              </View>
-              <View className="flex-1">
-                <TextField
-                  label={t('study.generate.to')}
-                  value={toValue}
-                  onChangeText={(v) => setTo(v.replace(/\D/g, ''))}
-                  keyboardType="number-pad"
-                  testID="quiz-to"
-                  editable={!gen.isPending}
-                />
-              </View>
+          {gen.data ? (
+            <View className="gap-md rounded-card border border-rule bg-surface p-lg">
+              <Text className="type-uiMedium text-ink">
+                {t('study.generate.done', { kept: gen.data.questions.length, dropped })}
+              </Text>
+              <Button
+                label={t('study.generate.start')}
+                testID="quiz-start"
+                onPress={() =>
+                  router.replace({ pathname: '/study/session', params: { quiz: gen.data.quiz_id } })
+                }
+              />
             </View>
-            <TextField
-              label={t('study.generate.count')}
-              testID="quiz-count"
-              value={count}
-              onChangeText={(v) => setCount(v.replace(/\D/g, ''))}
-              keyboardType="number-pad"
-              editable={!gen.isPending}
-              error={error}
-            />
-            <Button
-              label={t('study.generate.submit')}
-              busyLabel={t('study.generate.busy')}
-              busy={gen.isPending}
-              disabled={!max}
-              testID="quiz-submit"
-              onPress={submit}
-            />
-          </View>
-        )}
-      </ScrollView>
+          ) : (
+            <View className="gap-md">
+              <View className="flex-row gap-md">
+                <View className="flex-1">
+                  <TextField
+                    label={t('study.generate.from')}
+                    value={from}
+                    onChangeText={(v) => setFrom(v.replace(/\D/g, ''))}
+                    keyboardType="number-pad"
+                    testID="quiz-from"
+                    editable={!gen.isPending}
+                  />
+                </View>
+                <View className="flex-1">
+                  <TextField
+                    label={t('study.generate.to')}
+                    value={toValue}
+                    onChangeText={(v) => setTo(v.replace(/\D/g, ''))}
+                    keyboardType="number-pad"
+                    testID="quiz-to"
+                    editable={!gen.isPending}
+                  />
+                </View>
+              </View>
+              <TextField
+                label={t('study.generate.count')}
+                testID="quiz-count"
+                value={count}
+                onChangeText={(v) => setCount(v.replace(/\D/g, ''))}
+                keyboardType="number-pad"
+                editable={!gen.isPending}
+                error={error}
+              />
+              <Button
+                label={t('study.generate.submit')}
+                busyLabel={t('study.generate.busy')}
+                busy={gen.isPending}
+                disabled={!max}
+                testID="quiz-submit"
+                onPress={submit}
+              />
+            </View>
+          )}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }

@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ErrorState } from '@/components/ScreenState';
 import { bboxesOf, type PageWithUrl, useChunks, usePages } from '@/features/reader/api';
 import { PageView } from '@/features/reader/PageView';
 import { useThemeColors } from '@/theme/useThemeColors';
@@ -99,6 +100,8 @@ export default function ReaderScreen() {
           <ActivityIndicator className="text-ink" />
           <Text className="type-label text-ink-muted mt-sm">{t('reader.loading')}</Text>
         </View>
+      ) : pages.error ? (
+        <ErrorState onRetry={() => void pages.refetch()} />
       ) : total === 0 ? (
         <View className="flex-1 items-center justify-center px-screen">
           <Text className="type-ui text-ink-muted">{t('reader.noPages')}</Text>
