@@ -1,0 +1,36 @@
+# G7.7 — ảnh 4: câu hỏi ôn tập sinh từ tài liệu.
+appId: com.anchor.app
+---
+- runFlow: ../a11y/_open.yaml
+- tapOn:
+    text: "${DOC}[.] .*"
+- extendedWaitUntil:
+    visible:
+      id: "reader-quiz"
+    timeout: 20000
+- tapOn:
+    id: "reader-quiz"
+- extendedWaitUntil:
+    visible:
+      id: "quiz-submit"
+    timeout: 15000
+- tapOn:
+    id: "quiz-count"
+- eraseText
+- inputText: "5"
+- tapOn:
+    id: "quiz-submit"
+- extendedWaitUntil:
+    visible:
+      id: "quiz-start"
+    timeout: 240000
+- tapOn:
+    id: "quiz-start"
+- extendedWaitUntil:
+    visible:
+      id: "card-stem"
+    timeout: 20000
+- runFlow:
+    file: _shot.yaml
+    env:
+      NAME: 04-quiz

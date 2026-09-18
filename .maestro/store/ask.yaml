@@ -1,0 +1,40 @@
+# G7.7 — ảnh 2 (câu trả lời có neo) và ảnh 3 (trích dẫn mở đúng trang trong Reader).
+# Chạy: bash scripts/maestro.sh .maestro/store/ask.yaml -e DOC=… -e QUESTION=… -e EXPECT=…
+appId: com.anchor.app
+---
+- runFlow: ../a11y/_open.yaml
+- tapOn:
+    text: "${DOC}[.] .*"
+- extendedWaitUntil:
+    visible:
+      id: "reader-ask"
+    timeout: 20000
+- tapOn:
+    id: "reader-ask"
+- tapOn:
+    id: "ask-input"
+- inputText: "${QUESTION}"
+# Không hideKeyboard: trên Android nó gửi BACK khi bàn phím không hiện (nhập Unicode) → rớt màn hình.
+- tapOn:
+    id: "ask-send"
+# Chờ neo trước (EXPECT có thể nằm ngay trong câu hỏi); Gemini giờ cao điểm có thể mất > 1 phút.
+- extendedWaitUntil:
+    visible:
+      id: "answer-grounded|answer-inferred"
+    timeout: 150000
+- assertVisible: ".*${EXPECT}.*"
+- runFlow:
+    file: _shot.yaml
+    env:
+      NAME: 02-ask
+- tapOn:
+    text: "Trang [0-9]+|Page [0-9]+"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "reader-ask"
+    timeout: 20000
+- runFlow:
+    file: _shot.yaml
+    env:
+      NAME: 03-citation

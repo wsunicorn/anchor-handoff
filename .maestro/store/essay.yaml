@@ -1,0 +1,37 @@
+# G7.7 — ảnh 6: phản hồi bài tự luận theo rubric, có neo vào tài liệu.
+appId: com.anchor.app
+---
+- runFlow: ../a11y/_open.yaml
+- tapOn:
+    text: "${DOC}[.] .*"
+- extendedWaitUntil:
+    visible:
+      id: "reader-essay"
+    timeout: 20000
+- tapOn:
+    id: "reader-essay"
+- extendedWaitUntil:
+    visible:
+      id: "essay-body"
+    timeout: 15000
+- tapOn:
+    id: "essay-body"
+- inputText: "${ESSAY}"
+- scrollUntilVisible:
+    element:
+      id: "essay-submit"
+    direction: DOWN
+- tapOn:
+    id: "essay-submit"
+- extendedWaitUntil:
+    visible:
+      id: "essay-disclaimer"
+    timeout: 180000
+- scrollUntilVisible:
+    element:
+      id: "comment-grounded|comment-inferred"
+    direction: DOWN
+- runFlow:
+    file: _shot.yaml
+    env:
+      NAME: 06-essay

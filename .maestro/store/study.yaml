@@ -1,0 +1,14 @@
+# G7.7 — ảnh 5: bảng ôn tập (thẻ đến hạn, chuỗi ngày).
+appId: com.anchor.app
+---
+- runFlow: ../a11y/_open.yaml
+- tapOn:
+    text: "Ôn tập|Study"
+- extendedWaitUntil:
+    visible:
+      id: "study-due"
+    timeout: 30000
+- runFlow:
+    file: _shot.yaml
+    env:
+      NAME: 05-study

@@ -1,0 +1,65 @@
+# G7.8 — đường đi cho video cửa hàng (scripts/store-video.sh quay bằng `adb screenrecord` song song).
+# Thư viện → mở tài liệu → hỏi → thấy neo → chạm trích dẫn → về → Ôn tập → ôn 2 thẻ.
+appId: com.anchor.app
+---
+- runFlow: ../a11y/_open.yaml
+- waitForAnimationToEnd
+- tapOn:
+    text: "${DOC}[.] .*"
+- extendedWaitUntil:
+    visible:
+      id: "reader-ask"
+    timeout: 20000
+- swipe:
+    direction: UP
+    duration: 1200
+- tapOn:
+    id: "reader-ask"
+- tapOn:
+    id: "ask-input"
+- inputText: "${QUESTION}"
+- tapOn:
+    id: "ask-send"
+- extendedWaitUntil:
+    visible:
+      id: "answer-grounded|answer-inferred"
+    timeout: 150000
+- waitForAnimationToEnd
+- tapOn:
+    text: "Trang [0-9]+|Page [0-9]+"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "reader-ask"
+    timeout: 20000
+- waitForAnimationToEnd
+- tapOn:
+    text: "Quay lại|Back"
+- extendedWaitUntil:
+    visible: "Thư viện|Library"
+    timeout: 20000
+- tapOn:
+    text: "Ôn tập|Study"
+- extendedWaitUntil:
+    visible:
+      id: "study-review-now"
+    timeout: 30000
+- tapOn:
+    id: "study-review-now"
+- extendedWaitUntil:
+    visible:
+      id: "card-stem"
+    timeout: 20000
+- repeat:
+    times: 2
+    commands:
+      - tapOn:
+          id: "option-A"
+      - extendedWaitUntil:
+          visible:
+            id: "card-result"
+          timeout: 5000
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "grade-good"
+- waitForAnimationToEnd

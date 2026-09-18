@@ -1,0 +1,35 @@
+{
+  "_": "G7.7 — tiêu đề trên từng ảnh cửa hàng (scripts/store-frame.py). Thứ tự = thứ tự ảnh trên store. Không tuyên bố điểm số/học thuật tuyệt đối (CLAUDE.md quy tắc 4).",
+  "shots": [
+    {
+      "file": "01-library",
+      "vi": { "title": "Tài liệu của bạn, ở một chỗ", "sub": "Nạp PDF giáo trình, đề cương, bài báo — hoặc mở thẳng từ app khác" },
+      "en": { "title": "Your course PDFs, in one place", "sub": "Import lecture notes, syllabi and papers — or open them straight from another app" }
+    },
+    {
+      "file": "02-ask",
+      "vi": { "title": "Hỏi, và biết câu nào có căn cứ", "sub": "Mỗi câu trả lời được đối chiếu với tài liệu trước khi hiện" },
+      "en": { "title": "Ask, and see what's backed by the text", "sub": "Every answer is checked against your document before it's shown" }
+    },
+    {
+      "file": "03-citation",
+      "vi": { "title": "Chạm vào trích dẫn, mở đúng trang", "sub": "Đoạn gốc được tô sáng — tự kiểm, không phải tin" },
+      "en": { "title": "Tap a citation, land on the page", "sub": "The source passage is highlighted — verify it yourself" }
+    },
+    {
+      "file": "04-quiz",
+      "vi": { "title": "Câu hỏi ôn tập sinh từ chính tài liệu", "sub": "Chỉ giữ câu có đáp án nằm trong tài liệu" },
+      "en": { "title": "Review questions built from your document", "sub": "Only questions whose answer is in the text are kept" }
+    },
+    {
+      "file": "05-study",
+      "vi": { "title": "Ôn đúng lúc, kể cả khi mất mạng", "sub": "Lịch lặp lại ngắt quãng, đồng bộ khi có mạng trở lại" },
+      "en": { "title": "Review on schedule, even offline", "sub": "Spaced repetition that syncs when you're back online" }
+    },
+    {
+      "file": "06-essay",
+      "vi": { "title": "Phản hồi bài tự luận theo rubric", "sub": "Nhận xét tham khảo, neo vào tài liệu — không phải điểm chính thức" },
+      "en": { "title": "Essay feedback against a rubric", "sub": "Reference comments anchored to your document — not an official grade" }
+    }
+  ]
+}

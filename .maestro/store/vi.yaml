@@ -1,0 +1,37 @@
+# G7.7 — tham số tiếng Việt. Đặt trong file (UTF-8) vì `-e` qua maestro.bat trên Windows làm hỏng dấu.
+# Chuỗi NHẬP (QUESTION, ESSAY) viết theo Telex ASCII: Maestro không gõ được Unicode vào TextInput của RN,
+# còn `input text` ASCII đi qua Gboard tiếng Việt (bàn phím app khi locale vi) nên Telex chuyển thành có dấu.
+# Chuỗi ĐỐI CHIẾU (EXPECT) là Unicode thật; cần JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF-8 (scripts/store-shots.sh).
+#   maestro test -e FLOW=ask .maestro/store/vi.yaml
+appId: com.anchor.app
+env:
+  DOC: vi_decuong_ctu
+  QUESTION: "Hocj phaanf Vaatj lys ddaij cuwowng cos bao nhieeu tins chir vaf do booj moon naof phuj trachs?"
+  EXPECT: "tín chỉ"
+  ESSAY: "Hocj phaanf Vaatj lys ddaij cuwowng SP095 cos 2 tins chir, goomf 30 tieets lys thuyeets vaf 60 tieets tuwj hocj, do Booj moon Suw phamj Vaatj lys phuj trachs. DDieemr thi keets thucs hocj phaanf chieems 50% toongr ddieemr, conf ddieemr chuyeen caanf yeeu caauf duwj its nhaats 90% soos tieets. Baif kieemr tra giuwax kyf chieems 30% vaf baif taapj nhoms chieems 20%."
+---
+# runFlow không nhận đường dẫn có biến → chọn bằng `when`.
+- runFlow:
+    when:
+      true: ${FLOW == 'library'}
+    file: library.yaml
+- runFlow:
+    when:
+      true: ${FLOW == 'ask'}
+    file: ask.yaml
+- runFlow:
+    when:
+      true: ${FLOW == 'quiz'}
+    file: quiz.yaml
+- runFlow:
+    when:
+      true: ${FLOW == 'study'}
+    file: study.yaml
+- runFlow:
+    when:
+      true: ${FLOW == 'essay'}
+    file: essay.yaml
+- runFlow:
+    when:
+      true: ${FLOW == 'video'}
+    file: video.yaml

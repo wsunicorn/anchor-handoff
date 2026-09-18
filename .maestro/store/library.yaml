@@ -1,0 +1,8 @@
+# G7.7 — ảnh 1: Thư viện.
+appId: com.anchor.app
+---
+- runFlow: ../a11y/_open.yaml
+- runFlow:
+    file: _shot.yaml
+    env:
+      NAME: 01-library

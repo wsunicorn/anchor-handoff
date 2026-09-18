@@ -1,0 +1,5 @@
+# Subflow: chụp ảnh cửa hàng. Maestro 2.x ghi vào ~/.maestro/tests/<run>/; scripts/store-shots.sh chép sang docs/store/raw/<lang>/.
+# Không đặt env mặc định ở đây: env trong file đè lên env của runFlow/CLI.
+appId: com.anchor.app
+---
+- takeScreenshot: ${NAME}

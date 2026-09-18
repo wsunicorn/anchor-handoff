@@ -40,3 +40,7 @@ eval/out/
 .grade-req.json
 .grade-smoke.json
 .cost-dashboard.json
+
+# G7.7 ảnh cửa hàng thô và video (tái tạo bằng scripts/store-shots.sh, store-video.sh); docs/store/out/ là bản ghép để nộp
+docs/store/raw/
+docs/store/*.mp4
